@@ -28,7 +28,7 @@ This MCP server enables AI assistants and other MCP clients to interact with App
 ```bash
 git clone https://github.com/dastrobu/apple-mail-mcp.git
 cd apple-mail-mcp
-go build -o mail-mcp-server
+go build -o apple-mail-mcp
 ```
 
 ## Usage
@@ -40,13 +40,13 @@ The server supports two transport modes: STDIO (default) and HTTP.
 For use with MCP clients like Claude Desktop:
 
 ```bash
-./mail-mcp-server
+./apple-mail-mcp
 ```
 
 Or explicitly:
 
 ```bash
-./mail-mcp-server --transport=stdio
+./apple-mail-mcp --transport=stdio
 ```
 
 ### HTTP Transport
@@ -55,13 +55,13 @@ For web-based clients or development:
 
 ```bash
 # Start HTTP server on default port 8787
-./mail-mcp-server --transport=http
+./apple-mail-mcp --transport=http
 
 # Start on custom port
-./mail-mcp-server --transport=http --port=3000
+./apple-mail-mcp --transport=http --port=3000
 
 # Start on custom host and port
-./mail-mcp-server --transport=http --host=0.0.0.0 --port=3000
+./apple-mail-mcp --transport=http --host=0.0.0.0 --port=3000
 ```
 
 The HTTP server provides a streamable HTTP transport compatible with MCP clients.
@@ -97,7 +97,7 @@ When `--debug` is enabled, the server logs all MCP protocol interactions to stde
 This is useful for troubleshooting and understanding what data the MCP client is requesting:
 
 ```bash
-./mail-mcp-server --debug
+./apple-mail-mcp --debug
 ```
 
 Example debug output:
@@ -169,7 +169,7 @@ Add to your MCP client configuration (e.g., Claude Desktop):
 {
   "mcpServers": {
     "apple-mail": {
-      "command": "/path/to/mail-mcp-server"
+      "command": "/path/to/apple-mail-mcp"
     }
   }
 }
@@ -212,7 +212,7 @@ If the app doesn't appear in Automation settings:
 
 1. Run the server manually from Terminal to trigger the permission prompt:
    ```bash
-   ./mail-mcp-server
+   ./apple-mail-mcp
    ```
 2. macOS should show a dialog asking: "Terminal would like to control Mail.app"
 3. Click **OK** to grant permission
@@ -227,7 +227,7 @@ For automation or CI/CD scenarios, you can use `tccutil` to reset permissions:
 tccutil reset AppleEvents
 
 # Then run the server to trigger the permission dialog
-./mail-mcp-server
+./apple-mail-mcp
 ```
 
 **Note**: After granting permissions, you may need to restart the application running the MCP server (e.g., Claude Desktop, Terminal) for changes to take effect.
@@ -257,10 +257,10 @@ You can test the HTTP transport using curl:
 
 ```bash
 # Start the server (uses default port 8787)
-./mail-mcp-server --transport=http
+./apple-mail-mcp --transport=http
 
 # Or use environment variable
-TRANSPORT=http PORT=8787 ./mail-mcp-server
+TRANSPORT=http PORT=8787 ./apple-mail-mcp
 
 # In another terminal, test the endpoint
 # Note: Proper MCP clients will handle session management
@@ -496,7 +496,7 @@ make clean
 ```
 apple-mail-mcp/
 ├── cmd/
-│   └── mail-mcp-server/      # Main application entry point
+│   └── apple-mail-mcp/      # Main application entry point
 │       └── main.go
 ├── internal/
 │   ├── jxa/                  # JXA script execution

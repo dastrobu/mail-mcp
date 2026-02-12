@@ -14,40 +14,6 @@ An MCP (Model Context Protocol) server providing programmatic access to macOS Ma
 
 ## Architecture
 
-### Project Structure
-
-```
-apple-mail-mcp/
-├── cmd/
-│   └── mail-mcp-server/              # Main application entry point
-│       └── main.go
-├── internal/
-│   ├── jxa/                          # JXA script execution
-│   │   └── executor.go
-│   └── tools/                        # MCP tool implementations
-│       ├── scripts/                  # Embedded JXA scripts
-│       │   ├── list_accounts.js
-│       │   ├── list_mailboxes.js
-│       │   ├── get_messages.js
-│       │   ├── get_message_content.js
-│       │   └── search_messages.js
-│       ├── list_accounts.go          # Individual tool implementations
-│       ├── list_mailboxes.go
-│       ├── get_messages.go
-│       ├── get_message_content.go
-│       ├── search_messages.go
-│       └── tools.go                  # Tool registration and helpers
-├── .github/
-│   ├── workflows/
-│   │   └── ci.yaml                   # CI/CD pipeline
-│   └── copilot-instructions.md       # This file
-├── go.mod                            # Go module dependencies
-├── go.sum
-├── Makefile                          # Build commands
-└── README.md                         # User documentation
-
-```
-
 ### Core Principles
 
 1. **Single Binary**: All JXA scripts are embedded using `//go:embed` to create a self-contained executable
@@ -473,7 +439,7 @@ func TestExample(t *testing.T) {
 # Build
 make build
 # or
-go build -o mail-mcp-server
+go build -o apple-mail-mcp
 
 # Clean
 make clean
@@ -488,7 +454,7 @@ go vet ./...
 go test -v -count=1 ./...
 
 # Test server starts (important after any changes!)
-./mail-mcp-server
+./apple-mail-mcp
 # Should start without panicking. Press Ctrl+C to stop.
 ```
 
@@ -498,7 +464,7 @@ go test -v -count=1 ./...
 
 ```bash
 # Rebuild and test
-go build -o mail-mcp-server . && ./mail-mcp-server &
+go build -o apple-mail-mcp . && ./apple-mail-mcp &
 SERVER_PID=$!
 sleep 2
 if ps -p $SERVER_PID > /dev/null; then
@@ -511,7 +477,7 @@ fi
 
 Or simply:
 ```bash
-go build -o mail-mcp-server . && timeout 2s ./mail-mcp-server
+go build -o apple-mail-mcp . && timeout 2s ./apple-mail-mcp
 # If it times out (exit code 124), the server started successfully
 # If it panics immediately, you'll see the error
 ```
@@ -618,7 +584,7 @@ func myHandler(ctx context.Context, request *mcp.CallToolRequest, input MyInput)
 5. **Validate in JXA, defaults in Go** - keep validation in JXA scripts, only handle defaults in Go
 6. **Safe argument parsing** - use `argv[2] ? parseInt(argv[2]) : 0` not `parseInt(argv[2])`
 7. **jsonschema tags use plain strings** - NOT `key=value` format (e.g., use `jsonschema:"Description"` not `jsonschema:"required,description=X"`)
-8. **Always test server starts** - run `./mail-mcp-server` after changes to catch schema errors
+8. **Always test server starts** - run `./apple-mail-mcp` after changes to catch schema errors
 9. **Check script success field** before processing data
 10. **Type assertions need checking**: `val, ok := x.(string)`
 11. **JSON numbers are float64** - convert to int as needed
