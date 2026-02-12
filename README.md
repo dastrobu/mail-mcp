@@ -394,13 +394,15 @@ Gets the currently selected message(s) in the frontmost Mail.app viewer window.
 
 ### reply_to_message
 
-Creates a reply to a specific message and saves it as a draft in the Drafts mailbox. The reply is NOT sent automatically - it remains in drafts for review and manual sending.
+Creates a reply to a specific message and saves it as a draft in the Drafts mailbox. Mail.app automatically includes the quoted original message. The reply is NOT sent automatically - it remains in drafts for review and manual sending.
 
 **Parameters:**
 - `account` (string, required): Name of the email account
 - `mailbox` (string, required): Name of the mailbox containing the message to reply to
 - `message_id` (integer, required): The unique ID of the message to reply to
-- `reply_content` (string, required): The content/body of the reply message
+- `reply_content` (string, required): The content/body of the reply message (will be prepended to the automatically quoted original message)
+- `opening_window` (boolean, optional): Whether to show the window for the reply message. Default is false.
+- `reply_to_all` (boolean, optional): Whether to reply to all recipients. Default is false (reply to sender only).
 
 **Output:**
 - Object containing:
@@ -412,8 +414,9 @@ Creates a reply to a specific message and saves it as a draft in the Drafts mail
 
 **Behavior:**
 - Creates a reply with "Re: " prefix on the subject
-- Sets the recipient to the original message sender
-- Includes CC recipients from the original message
+- Sets the recipient to the original message sender (or all recipients if `reply_to_all` is true)
+- Mail.app automatically formats and includes the quoted original message
+- Your `reply_content` is prepended to the automatic quote
 - Saves the reply in the account's Drafts mailbox (not sent)
 - Maintains email thread context with proper headers
 

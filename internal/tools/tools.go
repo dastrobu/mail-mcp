@@ -9,4 +9,6 @@ func RegisterAll(srv *mcp.Server) {
 	RegisterGetMessageContent(srv)
 	RegisterGetSelectedMessages(srv)
 	RegisterReplyToMessage(srv)
+	RegisterCreateDraft(srv)
+	RegisterReplaceDraft(srv)
 }

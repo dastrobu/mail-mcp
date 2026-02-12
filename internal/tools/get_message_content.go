@@ -24,7 +24,7 @@ func RegisterGetMessageContent(srv *mcp.Server) {
 	mcp.AddTool(srv,
 		&mcp.Tool{
 			Name:        "get_message_content",
-			Description: "Retrieves the full content (body) of a specific message by its ID from a specific account and mailbox.",
+			Description: "Retrieves the full content (body) of a specific message by its ID from a specific account and mailbox. PERFORMANCE NOTE: For very large mailboxes (1000+ messages), searching for a message by ID can be slow. The tool searches only the first 1000 messages. Use smaller mailboxes or more recent messages for better performance.",
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "Get Message Content",
 				ReadOnlyHint:    true,

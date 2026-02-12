@@ -209,6 +209,8 @@ Rich (styled) text.
 - `font` (text) — The name of the font of the first character
 - `size` (number) — The size in points of the first character
 
+**Note:** To set RichText content programmatically in JXA, insert paragraphs using `Mail.make({new: "paragraph", withData: "text", at: message.content})`. You cannot directly assign a string to a RichText property (fails with "Can't convert types").
+
 #### `Attachment` [inherits from RichText]
 Represents an inline text attachment. This class is used mainly for make commands.
 
@@ -377,7 +379,7 @@ A new email message.
 **Properties:**
 - `sender` (text) — The sender of the message
 - `subject` (text) — The subject of the message
-- `content` (RichText) — The contents of the message
+- `content` (RichText) — The contents of the message. **IMPORTANT:** This is a RichText object, not a plain string. To set content, you must insert paragraphs using `Mail.make({new: "paragraph", withData: "your text", at: message.content})`. Direct string assignment will fail with "Can't convert types" error. Note: any write to this property destroys any auto-generated HTML content (e.g. quoted original in replies).
 - `visible` (boolean) — Controls whether the message window is shown on the screen. The default is false
 - `messageSignature` (Signature or missing value) — The signature of the message
 - `id` (integer, r/o) — The unique identifier of the message
