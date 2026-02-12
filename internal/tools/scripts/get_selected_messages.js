@@ -4,6 +4,23 @@ function run(argv) {
     const Mail = Application('Mail');
     Mail.includeStandardAdditions = true;
     
+    // Parse arguments: limit
+    const limit = parseInt(argv[0]);
+    
+    if (!limit || limit < 1) {
+        return JSON.stringify({
+            success: false,
+            error: 'Limit is required and must be at least 1'
+        });
+    }
+    
+    if (limit > 100) {
+        return JSON.stringify({
+            success: false,
+            error: 'Limit cannot exceed 100'
+        });
+    }
+    
     try {
         // Get the selected messages from the frontmost Mail viewer
         const viewers = Mail.messageViewers();
@@ -29,9 +46,10 @@ function run(argv) {
             });
         }
         
-        // Extract message details
+        // Extract message details (limited by limit parameter)
         const result = [];
-        for (let i = 0; i < selectedMessages.length; i++) {
+        const messagesToProcess = Math.min(selectedMessages.length, limit);
+        for (let i = 0; i < messagesToProcess; i++) {
             const msg = selectedMessages[i];
             
             // Get mailbox and account information

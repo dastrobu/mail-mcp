@@ -150,18 +150,106 @@ This runs:
 ### JXA Scripts
 
 - Always wrap in `function run(argv) { ... }`
+- Parse arguments at the top with safe fallbacks: `argv[0] || ''` or `argv[2] ? parseInt(argv[2]) : 0`
+- Validate all required arguments explicitly before try-catch
+- Return error JSON immediately for validation failures
 - Use try-catch for error handling
 - Return JSON with `{success: bool, data/error: ...}`
+- Always wrap output data in a `data` field
 - Initialize Mail.app properly
 - Convert dates to ISO strings
 - Use descriptive variable names
 
 ### Tool Implementation
 
-- Use `jsonschema` tags for input validation
+- Use `jsonschema` tags for input documentation
 - Output types must use `map[string]any` or slices
 - Set `Annotations` on all tools
 - Include clear descriptions
+
+### Argument Handling and Validation
+
+**Separation of Concerns:**
+- **Go Layer**: Handles optional parameter defaults only
+- **JXA Layer**: Validates all arguments and enforces constraints
+
+**Go Side - Default Values:**
+```go
+func handleTool(ctx context.Context, request *mcp.CallToolRequest, input ToolInput) (*mcp.CallToolResult, any, error) {
+    // Only apply defaults for optional parameters
+    limit := input.Limit
+    if limit == 0 {
+        limit = 5 // default value
+    }
+    
+    // Pass to JXA - validation happens there
+    data, err := jxa.Execute(ctx, script, account, mailbox, fmt.Sprintf("%d", limit))
+    // ...
+}
+```
+
+**JXA Side - Full Validation:**
+```javascript
+function run(argv) {
+    const Mail = Application('Mail');
+    Mail.includeStandardAdditions = true;
+    
+    // 1. Parse arguments with safe fallbacks
+    const accountName = argv[0] || '';
+    const mailboxName = argv[1] || '';
+    const limit = argv[2] ? parseInt(argv[2]) : 0;
+    
+    // 2. Validate each argument explicitly
+    if (!accountName) {
+        return JSON.stringify({
+            success: false,
+            error: 'Account name is required'
+        });
+    }
+    
+    if (!mailboxName) {
+        return JSON.stringify({
+            success: false,
+            error: 'Mailbox name is required'
+        });
+    }
+    
+    if (!limit || limit < 1) {
+        return JSON.stringify({
+            success: false,
+            error: 'Limit is required and must be at least 1'
+        });
+    }
+    
+    if (limit > 100) {
+        return JSON.stringify({
+            success: false,
+            error: 'Limit cannot exceed 100'
+        });
+    }
+    
+    // 3. Only proceed to try-catch after validation passes
+    try {
+        // ... implementation
+        return JSON.stringify({
+            success: true,
+            data: { ... }  // Always wrap in data field
+        });
+    } catch (e) {
+        return JSON.stringify({
+            success: false,
+            error: e.toString()
+        });
+    }
+}
+```
+
+**Key Points:**
+- Parse with safe fallbacks to avoid NaN/undefined
+- Validate each required argument with descriptive errors
+- No default values in argument parsing - make parameters required
+- Keep validation in JXA layer, not Go layer
+- Return errors immediately, don't defer to try-catch
 
 ## Adding New Tools
 

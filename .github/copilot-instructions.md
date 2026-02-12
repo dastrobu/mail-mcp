@@ -306,21 +306,44 @@ return JSON.stringify({
 
 The `jxa.Execute` function expects and extracts the `data` field. Scripts that don't wrap output will fail with "missing 'data' field" error.
 
-#### Argument Validation
+#### Argument Handling and Validation
 
-**CRITICAL:** All required arguments must be validated before processing:
+**Separation of Concerns:**
 
-1. Parse arguments at the top of the function
+- **Go Layer**: Handles optional parameter defaults only
+- **JXA Layer**: Validates all arguments and enforces constraints
+
+**Go Side - Default Values Only:**
+```go
+func handleTool(ctx context.Context, request *mcp.CallToolRequest, input ToolInput) (*mcp.CallToolResult, any, error) {
+    // Only apply defaults for optional parameters
+    limit := input.Limit
+    if limit == 0 {
+        limit = 5 // default value
+    }
+    
+    // Pass to JXA - validation happens there
+    data, err := jxa.Execute(ctx, script, account, mailbox, fmt.Sprintf("%d", limit))
+    // ...
+}
+```
+
+**JXA Side - Full Validation:**
+
+All required arguments must be validated before processing:
+
+1. Parse arguments at the top of the function with safe fallbacks
 2. Validate each required argument explicitly
 3. Return error JSON with descriptive message for missing/invalid arguments
 4. Only enter try-catch block after validation passes
 
 ```javascript
-// Good - explicit validation
+// Correct pattern - parse with safe fallbacks
 const accountName = argv[0] || '';
 const mailboxName = argv[1] || '';
-const limit = parseInt(argv[2]);
+const limit = argv[2] ? parseInt(argv[2]) : 0;
 
+// Validate each argument explicitly
 if (!accountName) {
     return JSON.stringify({
         success: false,
@@ -342,10 +365,31 @@ if (!limit || limit < 1) {
     });
 }
 
-// Bad - using defaults (don't do this)
-const accountName = argv[0] || 'default';
-const limit = parseInt(argv[1]) || 50;
+if (limit > 100) {
+    return JSON.stringify({
+        success: false,
+        error: 'Limit cannot exceed 100'
+    });
+}
+
+// Now safe to proceed with try-catch
+try {
+    // ... implementation
+}
 ```
+
+**WRONG - Don't use defaults in argument parsing:**
+```javascript
+// Bad - don't do this
+const accountName = argv[0] || 'default';  // No! Validate instead
+const limit = parseInt(argv[1]) || 50;     // No! Validate instead
+```
+
+**Why This Pattern:**
+- Go layer keeps defaults close to the API definition
+- JXA layer enforces data integrity before execution
+- Clear error messages come from the validation layer
+- No redundant validation between layers
 
 #### Error Handling
 
@@ -571,9 +615,10 @@ func myHandler(ctx context.Context, request *mcp.CallToolRequest, input MyInput)
 2. **Mail.app must be running** - scripts fail if not running
 3. **Always use `map[string]any` for outputs** - not custom structs
 4. **Always wrap JXA output in `data` field** - executor requires this
-5. **Validate all JXA arguments explicitly** - no default values in parsing
-6. **jsonschema tags use plain strings** - NOT `key=value` format (e.g., use `jsonschema:"Description"` not `jsonschema:"required,description=X"`)
-7. **Always test server starts** - run `./mail-mcp-server` after changes to catch schema errors
+5. **Validate in JXA, defaults in Go** - keep validation in JXA scripts, only handle defaults in Go
+6. **Safe argument parsing** - use `argv[2] ? parseInt(argv[2]) : 0` not `parseInt(argv[2])`
+7. **jsonschema tags use plain strings** - NOT `key=value` format (e.g., use `jsonschema:"Description"` not `jsonschema:"required,description=X"`)
+8. **Always test server starts** - run `./mail-mcp-server` after changes to catch schema errors
 9. **Check script success field** before processing data
 10. **Type assertions need checking**: `val, ok := x.(string)`
 11. **JSON numbers are float64** - convert to int as needed

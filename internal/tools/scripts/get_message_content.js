@@ -7,7 +7,7 @@ function run(argv) {
     // Parse arguments: accountName, mailboxName, messageId
     const accountName = argv[0] || '';
     const mailboxName = argv[1] || '';
-    const messageId = parseInt(argv[2]);
+    const messageId = argv[2] ? parseInt(argv[2]) : 0;
     
     if (!accountName) {
         return JSON.stringify({
