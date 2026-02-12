@@ -29,7 +29,7 @@ func TestStartupCheck(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), tt.timeout)
 			defer cancel()
 
-			err := StartupCheck(ctx)
+			data, err := StartupCheck(ctx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("StartupCheck() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -39,6 +39,9 @@ func TestStartupCheck(t *testing.T) {
 				t.Logf("StartupCheck() returned error: %v", err)
 			} else {
 				t.Logf("StartupCheck() passed successfully")
+				if properties, ok := data["properties"].(map[string]any); ok {
+					t.Logf("Retrieved %d properties from Mail.app", len(properties))
+				}
 			}
 		})
 	}

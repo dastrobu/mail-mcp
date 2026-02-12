@@ -82,7 +82,8 @@ func run(options *opts.Options) error {
 
 	// Run startup check to verify Mail.app is accessible
 	log.Println("Running Mail.app connectivity check...")
-	if err := jxa.StartupCheck(ctx); err != nil {
+	startupData, err := jxa.StartupCheck(ctx)
+	if err != nil {
 		return fmt.Errorf(`Mail.app connectivity check failed: %w
 
 This usually means either:
@@ -92,6 +93,18 @@ This usually means either:
 For detailed troubleshooting, see: https://github.com/dastrobu/apple-mail-mcp#troubleshooting`, err)
 	}
 	log.Println("Mail.app is accessible and ready")
+
+	// Print Mail.app properties as JSON when debugging is enabled
+	if options.Debug {
+		if properties, ok := startupData["properties"].(map[string]any); ok {
+			propertiesJSON, err := json.MarshalIndent(properties, "", "  ")
+			if err != nil {
+				log.Printf("[DEBUG] Failed to marshal properties: %v\n", err)
+			} else {
+				log.Printf("[DEBUG] Mail.app Properties:\n%s\n", string(propertiesJSON))
+			}
+		}
+	}
 
 	// Log to stderr (stdout is used for MCP communication in stdio mode)
 	log.Printf("Apple Mail MCP Server v%s initialized\n", serverVersion)
