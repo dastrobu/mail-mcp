@@ -436,6 +436,43 @@ All JXA scripts are embedded at compile time using `//go:embed`, making the serv
 
 ## Development
 
+### Git Hooks
+
+This project includes a pre-commit hook that automatically runs `go fmt` on all staged Go files before committing. This ensures consistent code formatting across the project.
+
+#### Installing Git Hooks
+
+Run the installation script:
+
+```bash
+make install-hooks
+```
+
+Or manually:
+
+```bash
+./scripts/install-hooks.sh
+```
+
+The pre-commit hook will:
+- Run `go fmt` on all staged `.go` files
+- Automatically stage the formatted files
+- Only run if there are staged Go files
+
+#### Manual Formatting
+
+You can also format code manually:
+
+```bash
+make fmt
+```
+
+Or directly:
+
+```bash
+gofmt -w .
+```
+
 ### Build
 
 ```bash

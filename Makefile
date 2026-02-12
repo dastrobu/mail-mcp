@@ -1,4 +1,4 @@
-.PHONY: build clean test test-scripts fmt vet help
+.PHONY: build clean test test-scripts fmt vet install-hooks help
 
 # Binary name
 BINARY=apple-mail-mcp
@@ -46,6 +46,10 @@ tidy:
 # Run all checks (format, vet, test)
 check: fmt vet test
 
+# Install git hooks
+install-hooks:
+	@./scripts/install-hooks.sh
+
 # Display help
 help:
 	@echo "Available targets:"
@@ -58,4 +62,5 @@ help:
 	@echo "  deps         - Download and verify dependencies"
 	@echo "  tidy         - Tidy dependencies"
 	@echo "  check        - Run fmt, vet, and test"
+	@echo "  install-hooks - Install git pre-commit hook"
 	@echo "  help         - Display this help message"
