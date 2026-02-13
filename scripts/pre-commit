@@ -1,13 +1,31 @@
 #!/bin/sh
 #
-# Pre-commit hook to run go fmt on all Go files
+# Pre-commit hook to run go fmt on all Go files and update TOC in README
 #
+
+# Check if README.md is staged
+README_STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep '^README\.md$')
+
+if [ -n "$README_STAGED" ]; then
+    echo "Running doctoc on README.md..."
+    
+    # Check if npx is available
+    if command -v npx >/dev/null 2>&1; then
+        npx doctoc --maxlevel 2 README.md --github --title "## Table of Contents"
+        
+        # Stage the updated README
+        git add README.md
+        echo "✓ doctoc completed"
+    else
+        echo "⚠️  Warning: npx not found, skipping doctoc"
+    fi
+fi
 
 # Find all staged Go files
 GO_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$')
 
 if [ -z "$GO_FILES" ]; then
-    # No Go files staged, nothing to do
+    # No Go files staged, nothing to do for Go formatting
     exit 0
 fi
 

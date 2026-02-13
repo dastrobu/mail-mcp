@@ -1,9 +1,12 @@
+
 # Apple Mail MCP Server
 
 [![CI](https://github.com/dastrobu/apple-mail-mcp/actions/workflows/ci.yaml/badge.svg)](https://github.com/dastrobu/apple-mail-mcp/actions/workflows/ci.yaml)
 
 A Model Context Protocol (MCP) server providing programmatic access to macOS Mail.app using JavaScript for Automation (JXA).
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 ## Table of Contents
 
 - [Overview](#overview)
@@ -11,24 +14,19 @@ A Model Context Protocol (MCP) server providing programmatic access to macOS Mai
 - [Features](#features)
 - [Requirements](#requirements)
 - [Installation](#installation)
-  - [Option 1: Homebrew (Recommended)](#option-1-homebrew-recommended)
-  - [Option 2: Download Binary](#option-2-download-binary)
-  - [Option 3: Build from Source](#option-3-build-from-source)
-- [Quick Start](#quick-start)
-  - [HTTP Transport (Recommended)](#http-transport-recommended)
-  - [STDIO Transport (Alternative)](#stdio-transport-alternative)
+- [Upgrading](#upgrading)
+- [Uninstalling](#uninstalling)
+- [Usage](#usage)
 - [Automation Permissions](#automation-permissions)
-- [macOS Automation Permissions](#macos-automation-permissions)
-- [Command-Line Options](#command-line-options)
-- [Debug Mode](#debug-mode)
-- [Bash Completion](#bash-completion)
-- [Configuration](#configuration)
-  - [Zed Configuration](#zed-configuration)
-  - [Claude Desktop Configuration](#claude-desktop-configuration)
+- [Troubleshooting](#troubleshooting)
 - [Available Tools](#available-tools)
-- [Rich Text Support](#rich-text-support)
+- [Architecture](#architecture)
 - [Development](#development)
+- [Error Handling](#error-handling)
+- [Limitations](#limitations)
 - [License](#license)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Overview
 
@@ -933,6 +931,22 @@ make install-hooks
 make fmt
 ```
 
+### Update Table of Contents
+
+The Table of Contents is auto-generated using [doctoc](https://github.com/thlorenz/doctoc). To update it after making changes to section headings:
+
+```bash
+# Using make
+make doctoc
+
+# Or directly with npx
+npx doctoc --maxlevel 2 README.md --github --title "## Table of Contents"
+```
+
+The TOC is wrapped in special comments (`<!-- START doctoc -->` ... `<!-- END doctoc -->`) and should never be edited manually. The `--maxlevel 2` flag limits the TOC to main sections (h2 headings only) for better readability.
+
+**Note:** The pre-commit hook automatically runs doctoc when `README.md` is staged, so the TOC stays in sync with section changes.
+
 ### Clean
 
 ```bash
@@ -970,5 +984,3 @@ For strikethrough and links, the text is styled distinctively (different color/f
 ## License
 
 MIT License - see LICENSE file for details
-
-

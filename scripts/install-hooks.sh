@@ -23,4 +23,6 @@ fi
 
 echo ""
 echo "Git hooks installed successfully!"
-echo "The pre-commit hook will automatically run 'go fmt' on staged Go files."
+echo "The pre-commit hook will automatically:"
+echo "  - Run 'go fmt' on staged Go files"
+echo "  - Update README.md Table of Contents with doctoc when README.md is staged"

@@ -46,3 +46,4 @@ temp/
 /apple-mail-mcp
 
 tmp*
+node_modules/

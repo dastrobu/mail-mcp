@@ -1,4 +1,4 @@
-.PHONY: build clean test fmt vet install-hooks help
+.PHONY: build clean test fmt vet install-hooks doctoc help
 
 # Binary name
 BINARY=apple-mail-mcp
@@ -42,6 +42,10 @@ check: fmt vet test
 install-hooks:
 	@./scripts/install-hooks.sh
 
+# Update README Table of Contents
+doctoc:
+	npx doctoc --maxlevel 2 README.md --github --title "## Table of Contents"
+
 # Display help
 help:
 	@echo "Available targets:"
@@ -55,4 +59,5 @@ help:
 	@echo "  tidy         - Tidy dependencies"
 	@echo "  check        - Run fmt, vet, and test"
 	@echo "  install-hooks - Install git pre-commit hook"
+	@echo "  doctoc       - Update README Table of Contents"
 	@echo "  help         - Display this help message"
