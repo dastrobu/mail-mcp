@@ -34,8 +34,62 @@ This MCP server enables AI assistants and other MCP clients to interact with App
 
 ## Installation
 
+### Option 1: Homebrew (Recommended)
+
 ```bash
-go build -o apple-mail-mcp
+# Add the tap
+brew tap dastrobu/tap
+
+# Install
+brew install apple-mail-mcp
+
+# Set up launchd service (IMPORTANT for proper permissions)
+apple-mail-mcp launchd create
+```
+
+**Important**: After installation, you must run `apple-mail-mcp launchd create` to set up the launchd service. This ensures automation permissions are granted to the binary itself (not Terminal or Claude Desktop).
+
+### Option 2: Download Binary
+
+Download the latest release from [GitHub Releases](https://github.com/dastrobu/apple-mail-mcp/releases):
+
+- **Intel Mac**: `apple-mail-mcp_*_darwin_amd64.tar.gz`
+- **Apple Silicon**: `apple-mail-mcp_*_darwin_arm64.tar.gz`
+
+```bash
+# Extract
+tar -xzf apple-mail-mcp_*.tar.gz
+
+# Set up launchd service (uses full path to binary)
+apple-mail-mcp launchd create
+```
+
+### Option 3: Install via Go
+
+```bash
+# Install directly from GitHub (requires Go 1.26+)
+go install github.com/dastrobu/apple-mail-mcp@latest
+
+# Set up launchd service
+apple-mail-mcp launchd create
+```
+
+**Note**: Ensure `$GOPATH/bin` (or `$HOME/go/bin`) is in your PATH, or use the full path:
+```bash
+~/go/bin/apple-mail-mcp launchd create
+```
+
+### Option 4: Build from Source
+
+```bash
+git clone https://github.com/dastrobu/apple-mail-mcp.git
+cd apple-mail-mcp
+
+# Build locally
+go build -o apple-mail-mcp .
+
+# Set up launchd service
+./apple-mail-mcp launchd create
 ```
 
 ## Usage
@@ -56,13 +110,13 @@ Create a launch agent to run the server in the background.
 
 ```bash
 # Run the setup subcommand
-./apple-mail-mcp launchd create
+apple-mail-mcp launchd create
 
 # With custom port
-./apple-mail-mcp --port=3000 launchd create
+apple-mail-mcp --port=3000 launchd create
 
 # With debug logging enabled
-./apple-mail-mcp --debug launchd create
+apple-mail-mcp --debug launchd create
 
 # The subcommand will:
 # - Create the launchd plist
@@ -73,45 +127,7 @@ Create a launch agent to run the server in the background.
 **To remove the service:**
 
 ```bash
-./apple-mail-mcp launchd remove
-```
-
-**Manual setup (alternative):**
-
-```bash
-# Create launch agent directory if needed
-mkdir -p ~/Library/LaunchAgents
-
-# Create launch agent plist
-cat > ~/Library/LaunchAgents/com.apple-mail-mcp.plist << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.apple-mail-mcp</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/path/to/apple-mail-mcp</string>
-        <string>--transport=http</string>
-        <string>--port=8787</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <true/>
-    <key>StandardOutPath</key>
-    <string>/tmp/apple-mail-mcp.log</string>
-    <key>StandardErrorPath</key>
-    <string>/tmp/apple-mail-mcp.err</string>
-</dict>
-</plist>
-EOF
-
-# Update the path to your actual binary location
-# Load and start the service
-launchctl load ~/Library/LaunchAgents/com.github.dastrobu.apple-mail-mcp.plist
-launchctl start com.apple-mail-mcp
+apple-mail-mcp launchd remove
 ```
 
 Check logs: `tail -f ~/Library/Logs/com.github.dastrobu.apple-mail-mcp/apple-mail-mcp.log ~/Library/Logs/com.github.dastrobu.apple-mail-mcp/apple-mail-mcp.err`
@@ -119,27 +135,19 @@ Check logs: `tail -f ~/Library/Logs/com.github.dastrobu.apple-mail-mcp/apple-mai
 To stop: `launchctl stop com.github.dastrobu.apple-mail-mcp`
 To unload: `launchctl unload ~/Library/LaunchAgents/com.github.dastrobu.apple-mail-mcp.plist`
 
-#### Option 2: Double-Click in Finder
-
-1. Open Finder and navigate to the directory containing `apple-mail-mcp`
-2. Double-click the binary
-3. macOS will prompt for permission for the `apple-mail-mcp` binary itself
-
-**Note:** Double-clicking won't allow you to pass command-line arguments. To use custom settings, use launchd or create a wrapper script.
-
-#### Option 3: Running from Terminal (Quick Testing)
+#### Option 2: Running from Terminal (Quick Testing)
 
 If you launch from Terminal, **Terminal will be asked for permissions**, not the binary:
 
 ```bash
 # This will prompt for Terminal's permissions (not ideal)
-./apple-mail-mcp --transport=http
+apple-mail-mcp --transport=http
 
 # Custom port
-./apple-mail-mcp --transport=http --port=3000
+apple-mail-mcp --transport=http --port=3000
 
 # Custom host and port
-./apple-mail-mcp --transport=http --host=0.0.0.0 --port=3000
+apple-mail-mcp --transport=http --host=0.0.0.0 --port=3000
 ```
 
 This is fine for quick testing, but for production use launchd (Option 1) or Finder (Option 2).
@@ -151,7 +159,7 @@ This is fine for quick testing, but for production use launchd (Option 1) or Fin
 STDIO mode runs the server as a child process of the MCP client. Note that automation permissions will be required for the parent application (Terminal, Claude Desktop, etc.).
 
 ```bash
-./apple-mail-mcp
+apple-mail-mcp
 ```
 
 ### Understanding Parent Process and Permissions
@@ -196,7 +204,7 @@ APPLE_MAIL_MCP_RICH_TEXT_STYLES=/path/to/custom_styles.yaml
 When `--debug` is enabled, the server logs all MCP protocol interactions and JXA script diagnostics to stderr, including tool calls, results, and JXA script logs. See [DEBUG_LOGGING.md](DEBUG_LOGGING.md) for details.
 
 ```bash
-./apple-mail-mcp --debug
+apple-mail-mcp --debug
 ```
 
 ### Bash Completion
@@ -208,14 +216,14 @@ Enable tab completion for commands and flags:
 apple-mail-mcp completion bash > /usr/local/etc/bash_completion.d/apple-mail-mcp
 
 # Or add to your ~/.bashrc or ~/.bash_profile
-source <(./apple-mail-mcp completion bash)
+source <(apple-mail-mcp completion bash)
 ```
 
 After sourcing, you can use tab completion:
 
 ```bash
-./apple-mail-mcp --transport=<TAB>    # Completes: http, stdio
-./apple-mail-mcp launchd <TAB>        # Completes: create, remove
+apple-mail-mcp --transport=<TAB>    # Completes: http, stdio
+apple-mail-mcp launchd <TAB>        # Completes: create, remove
 ```
 
 ### Configuration
@@ -227,13 +235,13 @@ After sourcing, you can use tab completion:
 1. Start the server using launchd (recommended) or Finder (see [HTTP Transport](#http-transport-recommended) section):
 
    ```bash
-   ./apple-mail-mcp launchd create
+   apple-mail-mcp launchd create
    ```
 
    Or for quick testing from Terminal:
 
    ```bash
-   ./apple-mail-mcp --transport=http
+   apple-mail-mcp --transport=http
    ```
 
 2. Configure Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_config.json`):
@@ -273,7 +281,7 @@ When using `--transport=http`, permissions can be granted to the `apple-mail-mcp
 
 **Using launchd (recommended):**
 
-1. Set up the launchd service: `./apple-mail-mcp launchd create`
+1. Set up the launchd service: `apple-mail-mcp launchd create`
 2. macOS will prompt for automation permissions for `apple-mail-mcp` binary
 3. Click **OK** to grant access
 4. The server is now ready to use
@@ -286,7 +294,7 @@ When using `--transport=http`, permissions can be granted to the `apple-mail-mcp
 
 **Using Terminal (quick testing only):**
 
-1. Run `./apple-mail-mcp --transport=http` from Terminal
+1. Run `apple-mail-mcp --transport=http` from Terminal
 2. macOS will prompt for automation permissions for **Terminal.app** (not the binary)
 3. Click **OK** to grant access to Terminal
 4. Note: This grants permission to Terminal, not the binary
@@ -508,7 +516,7 @@ When `content_format` is set to "markdown", the content is parsed as Markdown an
 You can customize rich text styling by providing a YAML configuration file:
 
 ```bash
-./apple-mail-mcp --rich-text-styles=/path/to/custom_styles.yaml
+apple-mail-mcp --rich-text-styles=/path/to/custom_styles.yaml
 ```
 
 **Margin Support:**

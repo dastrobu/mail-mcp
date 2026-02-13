@@ -76,6 +76,38 @@ brews:
 
     install: |
       bin.install "apple-mail-mcp"
+    
+    caveats: |
+      Apple Mail MCP Server has been installed!
+      
+      ⚠️  IMPORTANT: For proper automation permissions, you should run this server
+      via launchd (not from Terminal directly).
+      
+      Setup launchd service (recommended):
+        apple-mail-mcp launchd create
+      
+      This will:
+        • Create a launchd service that starts automatically
+        • Grant automation permissions to the binary (not Terminal)
+        • Run on HTTP transport (localhost:8787 by default)
+      
+      Configuration for Claude Desktop:
+        Add to ~/Library/Application Support/Claude/claude_desktop_config.json:
+        
+        {
+          "mcpServers": {
+            "apple-mail": {
+              "url": "http://localhost:8787/mcp/v1"
+            }
+          }
+        }
+      
+      To remove the launchd service:
+        apple-mail-mcp launchd remove
+      
+      For more information:
+        • README: https://github.com/dastrobu/apple-mail-mcp#readme
+        • Docs: https://github.com/dastrobu/apple-mail-mcp/tree/main/docs
 
 # Release configuration
 release:
