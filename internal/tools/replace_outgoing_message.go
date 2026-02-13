@@ -19,7 +19,7 @@ var replaceOutgoingMessageScript string
 type ReplaceOutgoingMessageInput struct {
 	OutgoingID    int      `json:"outgoing_id" jsonschema:"The ID of the OutgoingMessage to replace (from reply_to_message or create_outgoing_message)"`
 	Subject       string   `json:"subject,omitempty" jsonschema:"New subject line. Leave empty to keep existing subject"`
-	Content       string   `json:"content" jsonschema:"New body text (supports Markdown formatting). REQUIRED: Cannot preserve rich text from existing message"`
+	Content       string   `json:"content" jsonschema:"New body text (supports Markdown formatting: headings, bold, italic, code blocks, blockquotes, lists, links, horizontal rules. Tables and Mermaid diagrams are not supported). REQUIRED: Cannot preserve rich text from existing message"`
 	ContentFormat string   `json:"content_format,omitempty" jsonschema:"Content format: 'plain' or 'markdown'. Default is 'markdown'"`
 	ToRecipients  []string `json:"to_recipients,omitempty" jsonschema:"New list of To recipients. Leave empty to keep existing. Provide empty array to clear all"`
 	CcRecipients  []string `json:"cc_recipients,omitempty" jsonschema:"New list of CC recipients. Leave empty to keep existing. Provide empty array to clear all"`

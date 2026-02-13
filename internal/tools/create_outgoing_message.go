@@ -26,7 +26,7 @@ const (
 // CreateOutgoingMessageInput defines input parameters for create_outgoing_message tool
 type CreateOutgoingMessageInput struct {
 	Subject       string   `json:"subject" jsonschema:"Subject line of the email"`
-	Content       string   `json:"content" jsonschema:"Email body content (supports Markdown formatting)"`
+	Content       string   `json:"content" jsonschema:"Email body content (supports Markdown formatting: headings, bold, italic, code blocks, blockquotes, lists, links, horizontal rules. Tables and Mermaid diagrams are not supported)"`
 	ContentFormat string   `json:"content_format,omitempty" jsonschema:"Content format: 'plain' or 'markdown'. Default is 'markdown'"`
 	ToRecipients  []string `json:"to_recipients" jsonschema:"List of To recipient email addresses"`
 	CcRecipients  []string `json:"cc_recipients,omitempty" jsonschema:"List of CC recipient email addresses (optional)"`
