@@ -18,9 +18,15 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+var (
+	// Version information (set by GoReleaser via ldflags)
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 const (
-	serverName    = "apple-mail"
-	serverVersion = "0.1.0"
+	serverName = "apple-mail"
 )
 
 func main() {
@@ -40,6 +46,14 @@ func main() {
 	parser, err := opts.Parse()
 	if err != nil {
 		log.Fatalf("Failed to parse options: %v", err)
+	}
+
+	// Handle version flag
+	if opts.GlobalOpts.Version {
+		fmt.Printf("apple-mail-mcp version %s\n", version)
+		fmt.Printf("  commit: %s\n", commit)
+		fmt.Printf("  built:  %s\n", date)
+		return
 	}
 
 	// Check if a command was executed
@@ -100,7 +114,7 @@ func debugMiddleware(debug bool) func(mcp.MethodHandler) mcp.MethodHandler {
 func createServer(options *opts.Options, richtextConfig *richtext.PreparedConfig) *mcp.Server {
 	srv := mcp.NewServer(&mcp.Implementation{
 		Name:    serverName,
-		Version: serverVersion,
+		Version: version,
 	}, nil)
 
 	// Add debug middleware if debug mode is enabled
@@ -144,7 +158,7 @@ func run(options *opts.Options) error {
 	// 3. This allows the server to start without requiring Mail.app to be running
 
 	// Log to stderr (stdout is used for MCP communication in stdio mode)
-	log.Printf("Apple Mail MCP Server v%s initialized\n", serverVersion)
+	log.Printf("Apple Mail MCP Server v%s (commit: %s, built: %s) initialized\n", version, commit, date)
 
 	srv := createServer(options, richtextConfig)
 

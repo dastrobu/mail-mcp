@@ -12,6 +12,7 @@ import (
 
 // Options defines the command-line options for the MCP server
 type Options struct {
+	Version        bool                  `long:"version" short:"v" description:"Show version information and exit"`
 	Transport      typed_flags.Transport `long:"transport" env:"APPLE_MAIL_MCP_TRANSPORT" description:"Transport type: stdio or http" default:"stdio"`
 	Port           int                   `long:"port" env:"APPLE_MAIL_MCP_PORT" description:"HTTP port (only used with --transport=http)" default:"8787"`
 	Host           string                `long:"host" env:"APPLE_MAIL_MCP_HOST" description:"HTTP host (only used with --transport=http)" default:"localhost"`

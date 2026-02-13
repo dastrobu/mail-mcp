@@ -1,0 +1,134 @@
+# GoReleaser configuration for apple-mail-mcp
+# https://goreleaser.com
+
+version: 2
+
+# Project metadata
+project_name: apple-mail-mcp
+
+# Build configuration
+builds:
+  - id: apple-mail-mcp
+    main: .
+    binary: apple-mail-mcp
+    
+    # macOS only (Mail.app dependency)
+    goos:
+      - darwin
+    
+    goarch:
+      - amd64
+      - arm64
+    
+    # Build flags
+    flags:
+      - -trimpath
+    
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    
+    env:
+      - CGO_ENABLED=0
+
+# Archive configuration
+archives:
+  - id: apple-mail-mcp
+    format_overrides:
+      - goos: darwin
+        format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    
+    files:
+      - LICENSE
+      - README.md
+      - CONTRIBUTING.md
+
+# Checksums
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
+  algorithm: sha256
+
+# Homebrew tap (using modern 'homebrew' instead of deprecated 'brews')
+brews:
+  - repository:
+      owner: dastrobu
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    
+    directory: Formula
+    
+    homepage: https://github.com/dastrobu/apple-mail-mcp
+    description: "MCP server providing programmatic access to macOS Mail.app"
+    
+    license: MIT
+    
+    # Only macOS
+    dependencies:
+      - name: go
+        type: build
+    
+    test: |
+      system "#{bin}/apple-mail-mcp", "--version"
+    
+    install: |
+      bin.install "apple-mail-mcp"
+
+# Release configuration
+release:
+  github:
+    owner: dastrobu
+    name: apple-mail-mcp
+  
+  draft: false
+  prerelease: auto
+  
+  name_template: "v{{ .Version }}"
+  
+  # Use GitHub's auto-generated release notes
+  # Configure via .github/release.yml
+  mode: append
+  
+  footer: |
+    ---
+    
+    ## 📦 Installation
+    
+    ### Homebrew (Recommended)
+    
+    ```bash
+    brew tap dastrobu/tap
+    brew install apple-mail-mcp
+    ```
+    
+    ### Binary Download
+    
+    Download the appropriate archive for your system:
+    - **Intel Mac**: `apple-mail-mcp_{{ .Version }}_darwin_amd64.tar.gz`
+    - **Apple Silicon**: `apple-mail-mcp_{{ .Version }}_darwin_arm64.tar.gz`
+    
+    Extract and install:
+    ```bash
+    tar -xzf apple-mail-mcp_{{ .Version }}_darwin_*.tar.gz
+    sudo mv apple-mail-mcp /usr/local/bin/
+    ```
+    
+    ### From Source
+    
+    ```bash
+    go install github.com/dastrobu/apple-mail-mcp@v{{ .Version }}
+    ```
+    
+    ## 📚 Documentation
+    
+    See the [README](https://github.com/dastrobu/apple-mail-mcp#readme) for usage instructions.
+
+# Changelog - GitHub auto-generates release notes based on .github/release.yml
+changelog:
+  disable: true
