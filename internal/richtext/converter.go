@@ -338,149 +338,228 @@ func convertCodeBlock(node ast.Node, source []byte, config *PreparedConfig, isFi
 	return blocks, nil
 }
 
-// convertBlockquote converts a blockquote to styled blocks (including margin blocks)
-func convertBlockquote(node *ast.Blockquote, source []byte, config *PreparedConfig, isFirst bool) ([]StyledBlock, error) {
-	style := config.GetStyle("blockquote")
+// applyPrefixToBlocks adds a prefix to all non-margin blocks
+func applyPrefixToBlocks(blocks []StyledBlock, prefixContent string, prefixStyle *PreparedPrefix) []StyledBlock {
+	if prefixContent == "" {
+		return blocks
+	}
 
-	// Extract text and inline styles from blockquote children
-	var buf bytes.Buffer
-	var allInlineStyles []InlineStyle
-	currentPos := 0
+	prefixRuneCount := len([]rune(prefixContent))
+	result := make([]StyledBlock, 0, len(blocks))
 
-	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
-		if para, ok := child.(*ast.Paragraph); ok {
-			text, paraInlineStyles, err := extractTextWithInlineStyles(para, source, config)
-			if err != nil {
-				return nil, err
+	for _, block := range blocks {
+		// Handle margin blocks (empty lines between paragraphs)
+		if block.Type == "" && block.Text == "\n" {
+			// Apply prefix to margin blocks too (empty lines in blockquotes should have ">")
+			result = append(result, StyledBlock{
+				Type: block.Type,
+				Text: prefixContent + "\n",
+				Font: block.Font,
+				Size: block.Size,
+			})
+			continue
+		}
+
+		// Split block text into lines and prepend prefix to each line
+		lines := strings.Split(block.Text, "\n")
+		if len(lines) > 0 && lines[len(lines)-1] == "" {
+			lines = lines[:len(lines)-1] // Remove trailing empty string from split
+		}
+
+		for _, line := range lines {
+			prefixedText := prefixContent + line + "\n"
+
+			// Adjust inline styles to account for prefix
+			var adjustedInlineStyles []InlineStyle
+
+			// Add prefix inline style if it has custom styling
+			if prefixStyle != nil && (prefixStyle.Font != nil || prefixStyle.Size != nil || prefixStyle.Color != nil) {
+				prefixInlineStyle := InlineStyle{
+					Start: 0,
+					End:   prefixRuneCount,
+				}
+				if prefixStyle.Font != nil {
+					prefixInlineStyle.Font = *prefixStyle.Font
+				}
+				if prefixStyle.Size != nil {
+					prefixInlineStyle.Size = *prefixStyle.Size
+				}
+				if prefixStyle.Color != nil {
+					prefixInlineStyle.Color = prefixStyle.Color
+				}
+				adjustedInlineStyles = append(adjustedInlineStyles, prefixInlineStyle)
 			}
 
-			// Adjust inline style positions to account for accumulated text
-			for _, style := range paraInlineStyles {
+			// Adjust existing inline styles by shifting positions
+			for _, style := range block.InlineStyles {
 				adjustedStyle := style
-				adjustedStyle.Start += currentPos
-				adjustedStyle.End += currentPos
-				allInlineStyles = append(allInlineStyles, adjustedStyle)
+				adjustedStyle.Start += prefixRuneCount
+				adjustedStyle.End += prefixRuneCount
+				adjustedInlineStyles = append(adjustedInlineStyles, adjustedStyle)
 			}
 
-			buf.WriteString(text)
-			currentPos += len([]rune(text))
-
-			if child.NextSibling() != nil {
-				buf.WriteString("\n")
-				currentPos += 1 // newline is 1 rune
-			}
+			result = append(result, StyledBlock{
+				Type:         block.Type,
+				Text:         prefixedText,
+				Font:         block.Font,
+				Size:         block.Size,
+				Color:        block.Color,
+				InlineStyles: adjustedInlineStyles,
+				Level:        block.Level,
+			})
 		}
 	}
 
-	var blocks []StyledBlock
+	return result
+}
+
+// convertBlockquote converts a blockquote to styled blocks by recursively processing children
+func convertBlockquote(node *ast.Blockquote, source []byte, config *PreparedConfig, isFirst bool) ([]StyledBlock, error) {
+	style := config.GetStyle("blockquote")
+	var result []StyledBlock
+
+	// Check if we're nested inside another blockquote
+	isNested := isChildOfBlockquote(node)
+
+	// Collect content blocks that will get the prefix
+	var contentBlocks []StyledBlock
 
 	// Add margin_top block if specified (skip for first block)
+	// Add to contentBlocks so nested blockquotes get prefixed properly
+	// For root-level, we'll strip the prefix after applying it
 	if !isFirst && style.MarginTop != nil && *style.MarginTop > 0 {
-		blocks = append(blocks, StyledBlock{
+		contentBlocks = append(contentBlocks, StyledBlock{
 			Text: "\n",
 			Font: safeString(style.Font),
 			Size: *style.MarginTop,
 		})
 	}
 
-	// Get prefix (if any)
-	prefix := ""
-	prefixRuneCount := 0
-	var prefixInlineStyle *InlineStyle
+	// Recursively convert child nodes
+	isFirstChild := true
+	var prevChild ast.Node
+	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
+		var childBlocks []StyledBlock
+		var err error
+
+		// Add empty line between certain block elements for visual separation
+		if !isFirstChild && prevChild != nil && shouldAddEmptyLineBetween(prevChild, child) {
+			// Add empty line with just prefix (will be prefixed later)
+			contentBlocks = append(contentBlocks, StyledBlock{
+				Type: BlockTypeParagraph,
+				Text: "\n",
+				Font: safeString(style.Font),
+				Size: safeInt(style.Size),
+			})
+		}
+
+		switch n := child.(type) {
+		case *ast.Heading:
+			childBlocks, err = convertHeading(n, source, config, isFirstChild)
+		case *ast.Paragraph:
+			childBlocks, err = convertParagraph(n, source, config)
+		case *ast.CodeBlock, *ast.FencedCodeBlock:
+			childBlocks, err = convertCodeBlock(n, source, config, isFirstChild)
+		case *ast.Blockquote:
+			// Nested blockquote
+			childBlocks, err = convertBlockquote(n, source, config, isFirstChild)
+		case *ast.List:
+			childBlocks, err = convertList(n, source, config, 0, isFirstChild)
+		case *ast.ThematicBreak:
+			block, convertErr := convertThematicBreak(config)
+			if convertErr != nil {
+				err = convertErr
+			} else {
+				childBlocks = []StyledBlock{block}
+			}
+		default:
+			// Skip unsupported node types
+			continue
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		isFirstChild = false
+		prevChild = child
+		contentBlocks = append(contentBlocks, childBlocks...)
+	}
+
+	// Apply blockquote prefix to content blocks
+	var prefixContent string
+	var prefixStyle *PreparedPrefix
 	if style.Prefix != nil && style.Prefix.Content != nil {
-		prefix = *style.Prefix.Content
-		prefixRuneCount = len([]rune(prefix))
+		prefixContent = *style.Prefix.Content
+		prefixStyle = style.Prefix
+	}
+	prefixedBlocks := applyPrefixToBlocks(contentBlocks, prefixContent, prefixStyle)
 
-		// Create inline style for prefix if it has custom styling
-		if style.Prefix.Font != nil || style.Prefix.Size != nil || style.Prefix.Color != nil {
-			prefixInlineStyle = &InlineStyle{
-				Start: 0,
-				End:   prefixRuneCount,
-			}
-			if style.Prefix.Font != nil {
-				prefixInlineStyle.Font = *style.Prefix.Font
-			}
-			if style.Prefix.Size != nil {
-				prefixInlineStyle.Size = *style.Prefix.Size
-			}
-			if style.Prefix.Color != nil {
-				prefixInlineStyle.Color = style.Prefix.Color
-			}
+	// Strip prefix from our own margin_top ONLY if we're at root level (not nested)
+	// Nested blockquotes need the prefix on margin_top so parent can add its prefix too
+	startIdx := 0
+	if !isNested && !isFirst && style.MarginTop != nil && *style.MarginTop > 0 && len(prefixedBlocks) > 0 {
+		firstBlock := prefixedBlocks[0]
+		// Check if first block is our margin_top (has our margin size and got prefixed)
+		if firstBlock.Type == "" && firstBlock.Size == *style.MarginTop && firstBlock.Text != "\n" {
+			// Strip the prefix we just added (for root level only)
+			result = append(result, StyledBlock{
+				Type: firstBlock.Type,
+				Text: "\n",
+				Font: firstBlock.Font,
+				Size: firstBlock.Size,
+			})
+			startIdx = 1
 		}
 	}
-
-	// Split on newlines to avoid Mail.app paragraph splitting breaking inline styles
-	text := buf.String()
-	lines := strings.Split(text, "\n")
-
-	for i, line := range lines {
-		lineText := prefix + line + "\n"
-		lineRuneCount := prefixRuneCount + len([]rune(line))
-
-		// Find inline styles that apply to this line
-		var lineInlineStyles []InlineStyle
-
-		// Add prefix inline style first if it has custom styling
-		if prefixInlineStyle != nil {
-			lineInlineStyles = append(lineInlineStyles, *prefixInlineStyle)
-		}
-
-		lineStartPos := 0
-		for j := 0; j < i; j++ {
-			lineStartPos += len([]rune(lines[j])) + 1 // +1 for newline
-		}
-		lineEndPos := lineStartPos + len([]rune(line))
-
-		// Filter and adjust inline styles for this line (offset by prefix length)
-		for _, inlineStyle := range allInlineStyles {
-			// Check if style overlaps with this line
-			if inlineStyle.End > lineStartPos && inlineStyle.Start < lineEndPos {
-				adjustedStyle := inlineStyle
-				// Adjust start position (add prefix offset)
-				if adjustedStyle.Start < lineStartPos {
-					adjustedStyle.Start = prefixRuneCount
-				} else {
-					adjustedStyle.Start = adjustedStyle.Start - lineStartPos + prefixRuneCount
-				}
-				// Adjust end position (add prefix offset)
-				if adjustedStyle.End > lineEndPos {
-					adjustedStyle.End = lineRuneCount
-				} else {
-					adjustedStyle.End = adjustedStyle.End - lineStartPos + prefixRuneCount
-				}
-				lineInlineStyles = append(lineInlineStyles, adjustedStyle)
-			}
-		}
-
-		// Add blockquote color as character-level style covering entire line (including prefix)
-		if style.Color != nil {
-			colorStyle := InlineStyle{
-				Start: 0,
-				End:   lineRuneCount,
-				Color: style.Color,
-			}
-			lineInlineStyles = append(lineInlineStyles, colorStyle)
-		}
-
-		blocks = append(blocks, StyledBlock{
-			Type:         BlockTypeBlockquote,
-			Text:         lineText,
-			Font:         safeString(style.Font),
-			Size:         safeInt(style.Size),
-			InlineStyles: lineInlineStyles,
-		})
-	}
+	result = append(result, prefixedBlocks[startIdx:]...)
 
 	// Add margin_bottom block if specified
+	// This margin comes AFTER the blockquote, so it should NOT get the prefix
 	if style.MarginBottom != nil && *style.MarginBottom > 0 {
-		blocks = append(blocks, StyledBlock{
+		result = append(result, StyledBlock{
 			Text: "\n",
 			Font: safeString(style.Font),
 			Size: *style.MarginBottom,
 		})
 	}
 
-	return blocks, nil
+	return result, nil
+}
+
+// shouldAddEmptyLineBetween determines if an empty line should be added between two block elements
+func shouldAddEmptyLineBetween(prev, curr ast.Node) bool {
+	// Add empty line between paragraphs
+	if _, prevIsPara := prev.(*ast.Paragraph); prevIsPara {
+		if _, currIsPara := curr.(*ast.Paragraph); currIsPara {
+			return true
+		}
+	}
+
+	// Add empty line before headings (unless first element)
+	if _, currIsHeading := curr.(*ast.Heading); currIsHeading {
+		return true
+	}
+
+	// Add empty line before code blocks
+	if _, currIsCode := curr.(*ast.CodeBlock); currIsCode {
+		return true
+	}
+	if _, currIsFenced := curr.(*ast.FencedCodeBlock); currIsFenced {
+		return true
+	}
+
+	// Add empty line before nested blockquotes
+	if _, currIsBlockquote := curr.(*ast.Blockquote); currIsBlockquote {
+		return true
+	}
+
+	// Add empty line before lists
+	if _, currIsList := curr.(*ast.List); currIsList {
+		return true
+	}
+
+	return false
 }
 
 // convertList converts a list to styled blocks (including margin blocks)

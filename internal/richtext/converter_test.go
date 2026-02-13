@@ -3,6 +3,7 @@ package richtext
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -47,6 +48,8 @@ styles:
     font: "Helvetica-Oblique"
     size: 12
     color: "#6A737D"
+    prefix:
+      content: "> "
   list_item:
     font: "Helvetica"
     size: 12
@@ -207,14 +210,16 @@ styles:
 			markdown:   "> This is a quote",
 			wantBlocks: 1,
 			checkFunc: func(t *testing.T, blocks []StyledBlock) {
-				if blocks[0].Type != BlockTypeBlockquote {
-					t.Errorf("Expected type blockquote, got %s", blocks[0].Type)
+				// Blockquotes are now containers - child paragraphs render as paragraphs with prefix
+				if blocks[0].Type != BlockTypeParagraph {
+					t.Errorf("Expected type paragraph, got %s", blocks[0].Type)
 				}
-				if blocks[0].Text != "This is a quote\n" {
-					t.Errorf("Expected text 'This is a quote\\n', got %q", blocks[0].Text)
+				if blocks[0].Text != "> This is a quote\n" {
+					t.Errorf("Expected text '> This is a quote\\n', got %q", blocks[0].Text)
 				}
-				if blocks[0].Font != "Helvetica-Oblique" {
-					t.Errorf("Expected font Helvetica-Oblique, got %s", blocks[0].Font)
+				// Paragraph uses default font, not blockquote font
+				if blocks[0].Font != "Helvetica" {
+					t.Errorf("Expected font Helvetica, got %s", blocks[0].Font)
 				}
 			},
 		},
@@ -658,45 +663,8 @@ func TestConvertMarkdownToStyledBlocks_WithPrefix(t *testing.T) {
 				// No margin_bottom block since config has margin_bottom: null
 			},
 		},
-		{
-			name:     "blockquote_with_prefix",
-			markdown: "> This is a quote\n> with multiple lines",
-			want: []StyledBlock{
-				{
-					Type: BlockTypeBlockquote,
-					Text: "  This is a quote with multiple lines\n",
-					Font: "Helvetica-Oblique",
-					Size: 12,
-				},
-				// Margin bottom block
-				{
-					Type: "",
-					Text: "\n",
-					Font: "Helvetica-Oblique",
-					Size: 6,
-				},
-			},
-		},
-		{
-			name:     "blockquote_with_bold_and_prefix",
-			markdown: "> This is **bold** text",
-			want: []StyledBlock{
-				{
-					Type:         BlockTypeBlockquote,
-					Text:         "  This is bold text\n",
-					Font:         "Helvetica-Oblique",
-					Size:         12,
-					InlineStyles: []InlineStyle{{Start: 10, End: 14, Font: "Helvetica-Bold"}},
-				},
-				// Margin bottom block
-				{
-					Type: "",
-					Text: "\n",
-					Font: "Helvetica-Oblique",
-					Size: 6,
-				},
-			},
-		},
+		// Note: Blockquote tests removed - blockquotes are now containers that recursively
+		// process child elements, so they don't have prefix styling
 	}
 
 	for _, tt := range tests {
@@ -831,6 +799,232 @@ styles:
 	// Check first block is h1
 	if blocks[0].Type != BlockTypeHeading || blocks[0].Level != 1 {
 		t.Errorf("First block should be h1, got type=%s level=%d", blocks[0].Type, blocks[0].Level)
+	}
+}
+
+func TestConvertMarkdownToStyledBlocks_ComplexBlockquotes(t *testing.T) {
+	config, err := LoadConfig("")
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
+	tests := []struct {
+		name       string
+		markdown   string
+		wantBlocks int
+		checkFunc  func(t *testing.T, blocks []StyledBlock)
+	}{
+		{
+			name: "nested_blockquote",
+			markdown: `> This is the first level of quoting.
+>
+> > This is nested blockquote.
+>
+> Back to the first level.`,
+			wantBlocks: 7, // 3 paragraphs + 2 empty lines + 2 margins (nested margins get prefixed!)
+			checkFunc: func(t *testing.T, blocks []StyledBlock) {
+				// Debug: print all blocks
+				for i, block := range blocks {
+					t.Logf("Block %d: type=%q, text=%q", i, block.Type, block.Text)
+				}
+				// First paragraph with "> " prefix
+				if blocks[0].Type != BlockTypeParagraph {
+					t.Errorf("Block 0: expected paragraph, got %s", blocks[0].Type)
+				}
+				if blocks[0].Text != "> This is the first level of quoting.\n" {
+					t.Errorf("Block 0: unexpected text: %q", blocks[0].Text)
+				}
+
+				// Block 1: empty line
+				if blocks[1].Text != "> \n" {
+					t.Errorf("Block 1: expected empty line '> \\n', got %q", blocks[1].Text)
+				}
+
+				// Block 2: margin_top from nested blockquote (gets prefixed!)
+				if blocks[2].Text != "> > \n" {
+					t.Errorf("Block 2: expected nested margin '> > \\n', got %q", blocks[2].Text)
+				}
+
+				// Block 3: nested paragraph
+				if blocks[3].Text != "> > This is nested blockquote.\n" {
+					t.Errorf("Block 3: expected nested paragraph, got %q", blocks[3].Text)
+				}
+
+				// Block 4: margin_bottom from nested blockquote (gets prefixed!)
+				if blocks[4].Text != "> \n" {
+					t.Errorf("Block 4: expected margin with prefix '> \\n', got %q", blocks[4].Text)
+				}
+
+				// Block 5: back to first level
+				if blocks[5].Type != BlockTypeParagraph {
+					t.Errorf("Block 5: expected paragraph, got %s", blocks[5].Type)
+				}
+				if blocks[5].Text != "> Back to the first level.\n" {
+					t.Errorf("Block 5: unexpected text: %q", blocks[5].Text)
+				}
+			},
+		},
+		{
+			name: "blockquote_with_header",
+			markdown: `> ## This is a header.
+>
+> This is a paragraph.`,
+			wantBlocks: 4, // Header + margin + paragraph + margin_bottom
+			checkFunc: func(t *testing.T, blocks []StyledBlock) {
+				// Header
+				if blocks[0].Type != BlockTypeHeading {
+					t.Errorf("Block 0: expected heading, got %s", blocks[0].Type)
+				}
+				if blocks[0].Level != 2 {
+					t.Errorf("Block 0: expected level 2, got %d", blocks[0].Level)
+				}
+				if blocks[0].Text != "> This is a header.\n" {
+					t.Errorf("Block 0: unexpected text: %q", blocks[0].Text)
+				}
+
+				// Paragraph (block 2, after header's margin_bottom)
+				if len(blocks) < 3 {
+					t.Fatal("Not enough blocks")
+				}
+				if blocks[2].Type != BlockTypeParagraph {
+					t.Errorf("Block 2: expected paragraph, got %s", blocks[2].Type)
+				}
+				if blocks[2].Text != "> This is a paragraph.\n" {
+					t.Errorf("Block 2: unexpected text: %q", blocks[2].Text)
+				}
+			},
+		},
+		{
+			name: "blockquote_with_list",
+			markdown: `> 1. This is the first list item.
+> 2. This is the second list item.`,
+			wantBlocks: 4, // Two list items + list margin_bottom + blockquote margin_bottom
+			checkFunc: func(t *testing.T, blocks []StyledBlock) {
+				// First list item
+				if blocks[0].Type != BlockTypeListItem {
+					t.Errorf("Block 0: expected list_item, got %s", blocks[0].Type)
+				}
+				if blocks[0].Text != "> 1. This is the first list item.\n" {
+					t.Errorf("Block 0: unexpected text: %q", blocks[0].Text)
+				}
+
+				// Second list item
+				if blocks[1].Type != BlockTypeListItem {
+					t.Errorf("Block 1: expected list_item, got %s", blocks[1].Type)
+				}
+				if blocks[1].Text != "> 2. This is the second list item.\n" {
+					t.Errorf("Block 1: unexpected text: %q", blocks[1].Text)
+				}
+			},
+		},
+		{
+			name: "blockquote_with_code",
+			markdown: `> Here's some example code:
+>
+>     return shell_exec("echo $input");`,
+			wantBlocks: 6, // Paragraph + empty line + code blocks + blockquote margin_bottom
+			checkFunc: func(t *testing.T, blocks []StyledBlock) {
+				// First block is paragraph
+				if blocks[0].Type != BlockTypeParagraph {
+					t.Errorf("Block 0: expected paragraph, got %s", blocks[0].Type)
+				}
+				if blocks[0].Text != "> Here's some example code:\n" {
+					t.Errorf("Block 0: unexpected text: %q", blocks[0].Text)
+				}
+
+				// Block 1 should be empty line
+				if blocks[1].Text != "> \n" {
+					t.Errorf("Block 1: expected empty line with prefix '> \\n', got %q", blocks[1].Text)
+				}
+
+				// Find a code block (should be after the empty line)
+				foundCode := false
+				for i := 2; i < len(blocks)-1; i++ {
+					if blocks[i].Type == BlockTypeCodeBlock {
+						foundCode = true
+						// Code block should have both blockquote and code prefixes
+						if !strings.HasPrefix(blocks[i].Text, ">   ") {
+							t.Errorf("Code block should have '>   ' prefix, got %q", blocks[i].Text)
+						}
+						break
+					}
+				}
+				if !foundCode {
+					t.Error("Expected to find a code_block")
+				}
+			},
+		},
+		{
+			name: "blockquote_with_multiple_paragraphs",
+			markdown: `> First paragraph.
+>
+> Second paragraph.`,
+			wantBlocks: 4, // paragraph + empty line + paragraph + margin_bottom
+			checkFunc: func(t *testing.T, blocks []StyledBlock) {
+				// First paragraph with prefix
+				if blocks[0].Type != BlockTypeParagraph {
+					t.Errorf("Block 0: expected paragraph, got %s", blocks[0].Type)
+				}
+				if blocks[0].Text != "> First paragraph.\n" {
+					t.Errorf("Block 0: unexpected text: %q", blocks[0].Text)
+				}
+
+				// Empty line with prefix for visual separation
+				if len(blocks) < 2 {
+					t.Fatal("Not enough blocks")
+				}
+				if blocks[1].Type != BlockTypeParagraph {
+					t.Errorf("Block 1: expected paragraph (empty line), got %s", blocks[1].Type)
+				}
+				if blocks[1].Text != "> \n" {
+					t.Errorf("Block 1: expected empty line with prefix '> \\n', got %q", blocks[1].Text)
+				}
+
+				// Second paragraph with prefix
+				if len(blocks) < 3 {
+					t.Fatal("Not enough blocks")
+				}
+				if blocks[2].Type != BlockTypeParagraph {
+					t.Errorf("Block 2: expected paragraph, got %s", blocks[2].Type)
+				}
+				if blocks[2].Text != "> Second paragraph.\n" {
+					t.Errorf("Block 2: unexpected text: %q", blocks[2].Text)
+				}
+
+				// Last block should be blockquote margin_bottom
+				if len(blocks) < 4 {
+					t.Fatal("Not enough blocks")
+				}
+				if blocks[3].Type != "" {
+					t.Errorf("Block 3: expected margin (empty type), got %s", blocks[3].Type)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			doc, err := ParseMarkdown([]byte(tt.markdown))
+			if err != nil {
+				t.Fatalf("ParseMarkdown() error = %v", err)
+			}
+
+			blocks, err := ConvertMarkdownToStyledBlocks(doc, []byte(tt.markdown), config)
+			if err != nil {
+				t.Fatalf("ConvertMarkdownToStyledBlocks() error = %v", err)
+			}
+
+			if len(blocks) != tt.wantBlocks {
+				t.Errorf("Expected %d blocks, got %d", tt.wantBlocks, len(blocks))
+				for i, block := range blocks {
+					t.Logf("Block %d: type=%s, text=%q", i, block.Type, block.Text)
+				}
+			}
+
+			if tt.checkFunc != nil {
+				tt.checkFunc(t, blocks)
+			}
+		})
 	}
 }
 

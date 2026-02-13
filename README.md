@@ -1,5 +1,7 @@
 # Apple Mail MCP Server
 
+[![CI](https://github.com/dastrobu/apple-mail-mcp/actions/workflows/ci.yaml/badge.svg)](https://github.com/dastrobu/apple-mail-mcp/actions/workflows/ci.yaml)
+
 A Model Context Protocol (MCP) server providing programmatic access to macOS Mail.app using Go and JavaScript for Automation (JXA).
 
 ## Overview

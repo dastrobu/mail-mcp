@@ -88,15 +88,13 @@ styles:
 
   blockquote:
     font: "Helvetica-Oblique"
-    size: 12
-    color: null
+    size: null
+    color: *50_percent_gray
     margin_top: 6
     margin_bottom: 6
     prefix:
-      content: "  "
-      font: null
-      size: null
-      color: null
+      content: "> "
+      # No custom styling - inherits from child elements
 
   list:
     margin_top: 6
