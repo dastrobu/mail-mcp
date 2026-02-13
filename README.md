@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/dastrobu/apple-mail-mcp/actions/workflows/ci.yaml/badge.svg)](https://github.com/dastrobu/apple-mail-mcp/actions/workflows/ci.yaml)
 
-A Model Context Protocol (MCP) server providing programmatic access to macOS Mail.app using Go and JavaScript for Automation (JXA).
+A Model Context Protocol (MCP) server providing programmatic access to macOS Mail.app using JavaScript for Automation (JXA).
 
 ## Overview
 
@@ -13,7 +13,8 @@ This MCP server enables AI assistants and other MCP clients to interact with App
 - **Human-in-the-loop design**: No emails are sent automatically - all drafts require manual sending. This prevents agents from sending emails without human oversight.
 - No data transmitted outside of the MCP connection
 - Runs locally on your machine
-- Mail.app's security and permissions apply
+- Grant automation permissions to the MCP server alone, not to the terminal or any other application like Claude Code.
+- No credentials to a mail account ot SMTP server required, all interactions happen transparently with the Mail.app.
 
 ## Features
 
@@ -22,14 +23,12 @@ This MCP server enables AI assistants and other MCP clients to interact with App
 - **Get Message Content**: Fetch detailed content of individual messages
 - **Get Selected Messages**: Retrieve currently selected message(s) in Mail.app
 - **Reply to Message**: Create a reply to a message and save it as a draft
-- **Create Outgoing Message**: Create new email drafts with optional Markdown formatting
+- **Create Outgoing Message**: Create new email drafts with optional Markdown rendering to rich text.
 - **Rich Text Support**: Format emails with Markdown (headings, bold, italic, lists, code blocks, and more)
-- **Graceful Error Handling**: Clear error messages when Mail.app closes or becomes unavailable
 
 ## Requirements
 
 - macOS (Mail.app is macOS-only)
-- Go 1.26 or later
 - Mail.app configured with at least one email account (does not need to be running at server startup)
 - Automation permissions (see [Automation Permissions](#automation-permissions) below)
 
@@ -182,8 +181,8 @@ Commands:
   completion bash        Generate bash completion script
 ```
 
-
 Options can also be set via environment variables:
+
 ```
 APPLE_MAIL_MCP_TRANSPORT=http
 APPLE_MAIL_MCP_PORT=8787
@@ -213,6 +212,7 @@ source <(./apple-mail-mcp completion bash)
 ```
 
 After sourcing, you can use tab completion:
+
 ```bash
 ./apple-mail-mcp --transport=<TAB>    # Completes: http, stdio
 ./apple-mail-mcp launchd <TAB>        # Completes: create, remove
@@ -225,11 +225,13 @@ After sourcing, you can use tab completion:
 **HTTP Transport (Recommended):**
 
 1. Start the server using launchd (recommended) or Finder (see [HTTP Transport](#http-transport-recommended) section):
+
    ```bash
    ./apple-mail-mcp launchd create
    ```
-   
+
    Or for quick testing from Terminal:
+
    ```bash
    ./apple-mail-mcp --transport=http
    ```
@@ -248,6 +250,7 @@ After sourcing, you can use tab completion:
 **STDIO Transport:**
 
 Configure Claude Desktop to launch the server as a child process:
+
 ```json
 {
   "mcpServers": {
@@ -269,17 +272,20 @@ macOS requires automation permissions to control Mail.app. The permission behavi
 When using `--transport=http`, permissions can be granted to the `apple-mail-mcp` binary itself, **but only if launched without Terminal as the parent process**.
 
 **Using launchd (recommended):**
+
 1. Set up the launchd service: `./apple-mail-mcp launchd create`
 2. macOS will prompt for automation permissions for `apple-mail-mcp` binary
 3. Click **OK** to grant access
 4. The server is now ready to use
 
 **Using Finder:**
+
 1. Double-click the `apple-mail-mcp` binary in Finder
 2. macOS will prompt for automation permissions for `apple-mail-mcp` binary
 3. Click **OK** to grant access
 
 **Using Terminal (quick testing only):**
+
 1. Run `./apple-mail-mcp --transport=http` from Terminal
 2. macOS will prompt for automation permissions for **Terminal.app** (not the binary)
 3. Click **OK** to grant access to Terminal
@@ -326,6 +332,7 @@ After resetting, the next time the server tries to control Mail.app, macOS will 
 ### Automation Permission Errors
 
 If you see:
+
 ```
 Mail.app startup check failed: osascript execution failed: signal: killed
 ```
@@ -348,9 +355,11 @@ Tool calls will automatically work once Mail.app is started and permissions are 
 Lists all configured email accounts in Apple Mail.
 
 **Parameters:**
+
 - `enabled` (boolean, optional): Filter to only show enabled accounts (default: false)
 
 **Output:**
+
 ```json
 {
   "accounts": [
@@ -374,11 +383,13 @@ Lists all available mailboxes across all Mail accounts.
 Fetches the full content of a specific message including body, headers, recipients, and attachments.
 
 **Parameters:**
+
 - `account` (string, required): Name of the email account
 - `mailbox` (string, required): Name of the mailbox (e.g., "INBOX", "Sent")
 - `message_id` (integer, required): The unique ID of the message
 
 **Output:**
+
 - Full message object including:
   - Basic fields: id, subject, sender, replyTo
   - Dates: dateReceived, dateSent
@@ -392,9 +403,11 @@ Fetches the full content of a specific message including body, headers, recipien
 Gets the currently selected message(s) in the frontmost Mail.app viewer window.
 
 **Parameters:**
+
 - None (operates on current selection)
 
 **Output:**
+
 ```json
 {
   "count": 1,
@@ -420,6 +433,7 @@ Gets the currently selected message(s) in the frontmost Mail.app viewer window.
 Creates a reply to a specific message and saves it as a draft in the Drafts mailbox. Mail.app automatically includes the quoted original message. The reply is NOT sent automatically.
 
 **Parameters:**
+
 - `account` (string, required): Name of the email account
 - `mailbox` (string, required): Name of the mailbox containing the message to reply to
 - `message_id` (integer, required): The unique ID of the message to reply to
@@ -428,6 +442,7 @@ Creates a reply to a specific message and saves it as a draft in the Drafts mail
 - `reply_to_all` (boolean, optional): Whether to reply to all recipients. Default is false.
 
 **Output:**
+
 - Object containing:
   - `draft_id`: ID of the created draft message
   - `subject`: Subject line of the reply (prefixed with "Re: ")
@@ -436,6 +451,7 @@ Creates a reply to a specific message and saves it as a draft in the Drafts mail
   - `message`: Confirmation message
 
 **Important Notes:**
+
 - The returned `draft_id` is obtained after a 4-second sync delay
 - If creating multiple drafts rapidly, wait 4+ seconds between operations
 - See [docs/DRAFT_MANAGEMENT.md](docs/DRAFT_MANAGEMENT.md) for details
@@ -445,6 +461,7 @@ Creates a reply to a specific message and saves it as a draft in the Drafts mail
 Creates a new outgoing email message with optional Markdown formatting. The message is saved but NOT sent automatically - you must send it manually in Mail.app.
 
 **Parameters:**
+
 - `subject` (string, required): Subject line of the email
 - `content` (string, required): Email body content (supports Markdown formatting when `content_format` is "markdown")
 - `content_format` (string, optional): Content format: "plain" or "markdown". Default is "markdown"
@@ -459,6 +476,7 @@ Creates a new outgoing email message with optional Markdown formatting. The mess
 When `content_format` is set to "markdown", the content is parsed as Markdown and rendered with rich text styling:
 
 **Supported Markdown Elements:**
+
 - **Headings**: `# H1` through `###### H6`
 - **Bold**: `**bold text**`
 - **Italic**: `*italic text*`
@@ -474,7 +492,8 @@ When `content_format` is set to "markdown", the content is parsed as Markdown an
 - **Hard Line Breaks**: Two spaces at end of line creates line break within paragraph
 
 **Example:**
-```json
+
+````json
 {
   "subject": "Project Update",
   "content": "# Weekly Report\n\nThis week we:\n\n- Completed **Phase 1**\n- Started *Phase 2*\n\n## Code Changes\n\n```\nfunction example() {\n  return true;\n}\n```",
@@ -482,7 +501,7 @@ When `content_format` is set to "markdown", the content is parsed as Markdown an
   "to_recipients": ["team@example.com"],
   "opening_window": false
 }
-```
+````
 
 **Custom Styling:**
 
@@ -501,19 +520,19 @@ styles:
   h1:
     font: "Helvetica-Bold"
     size: 24
-    margin_top: 12    # 12 point empty line before heading
-    margin_bottom: 6   # 6 point empty line after heading
-  
+    margin_top: 12 # 12 point empty line before heading
+    margin_bottom: 6 # 6 point empty line after heading
+
   code_block:
     margin_top: 6
     margin_bottom: 6
-  
+
   blockquote:
     margin_top: 6
     margin_bottom: 6
-  
+
   list:
-    margin_top: 6     # Applied to entire list, not individual items
+    margin_top: 6 # Applied to entire list, not individual items
     margin_bottom: 6
 ```
 
@@ -522,6 +541,7 @@ styles:
 See [docs/RICH_TEXT_DESIGN.md](docs/RICH_TEXT_DESIGN.md) for the complete styling specification and examples.
 
 **Output:**
+
 - Object containing:
   - `outgoing_id`: ID of the created OutgoingMessage
   - `subject`: Subject line
@@ -533,6 +553,7 @@ See [docs/RICH_TEXT_DESIGN.md](docs/RICH_TEXT_DESIGN.md) for the complete stylin
   - `warning`: (optional) Warning if some recipients couldn't be added
 
 **Important Notes:**
+
 - The OutgoingMessage only exists in memory while Mail.app is running
 - For persistent drafts that survive Mail.app restart, use `reply_to_message` instead
 - The message is NOT sent automatically - manual sending required
@@ -580,6 +601,7 @@ make clean
 ## Error Handling
 
 The server provides detailed error messages including:
+
 - Script errors with clear descriptions
 - Missing data with descriptive errors
 - Invalid parameters with usage hints
@@ -603,8 +625,6 @@ Due to JXA and Mail.app RichText API constraints:
 - **Dark mode**: All colors use character-level styling for consistency. Mail.app automatically adapts character-level colors in dark mode.
 
 For strikethrough and links, the text is styled distinctively (different color/font) to indicate the formatting intent, but the actual strikethrough line or clickable link behavior is not available through JXA automation.
-
-
 
 ## License
 
