@@ -266,16 +266,48 @@ func convertCodeBlock(node ast.Node, source []byte, config *PreparedConfig, isFi
 		})
 	}
 
+	// Get prefix (if any)
+	prefix := ""
+	prefixRuneCount := 0
+	var prefixInlineStyle *InlineStyle
+	if style.Prefix != nil && style.Prefix.Content != nil {
+		prefix = *style.Prefix.Content
+		prefixRuneCount = len([]rune(prefix))
+
+		// Create inline style for prefix if it has custom styling
+		if style.Prefix.Font != nil || style.Prefix.Size != nil || style.Prefix.Color != nil {
+			prefixInlineStyle = &InlineStyle{
+				Start: 0,
+				End:   prefixRuneCount,
+			}
+			if style.Prefix.Font != nil {
+				prefixInlineStyle.Font = *style.Prefix.Font
+			}
+			if style.Prefix.Size != nil {
+				prefixInlineStyle.Size = *style.Prefix.Size
+			}
+			if style.Prefix.Color != nil {
+				prefixInlineStyle.Color = style.Prefix.Color
+			}
+		}
+	}
+
 	// Split on newlines to avoid Mail.app paragraph splitting breaking inline styles
 	text := buf.String()
 	lines := strings.Split(text, "\n")
 
 	for _, line := range lines {
-		lineText := line + "\n"
-		lineRuneCount := len([]rune(line))
+		lineText := prefix + line + "\n"
+		lineRuneCount := prefixRuneCount + len([]rune(line))
 
 		var lineInlineStyles []InlineStyle
-		// Add code block color as character-level style covering entire line
+
+		// Add prefix inline style if it has custom styling
+		if prefixInlineStyle != nil {
+			lineInlineStyles = append(lineInlineStyles, *prefixInlineStyle)
+		}
+
+		// Add code block color as character-level style covering entire line (including prefix)
 		if style.Color != nil {
 			colorStyle := InlineStyle{
 				Start: 0,
@@ -351,44 +383,76 @@ func convertBlockquote(node *ast.Blockquote, source []byte, config *PreparedConf
 		})
 	}
 
+	// Get prefix (if any)
+	prefix := ""
+	prefixRuneCount := 0
+	var prefixInlineStyle *InlineStyle
+	if style.Prefix != nil && style.Prefix.Content != nil {
+		prefix = *style.Prefix.Content
+		prefixRuneCount = len([]rune(prefix))
+
+		// Create inline style for prefix if it has custom styling
+		if style.Prefix.Font != nil || style.Prefix.Size != nil || style.Prefix.Color != nil {
+			prefixInlineStyle = &InlineStyle{
+				Start: 0,
+				End:   prefixRuneCount,
+			}
+			if style.Prefix.Font != nil {
+				prefixInlineStyle.Font = *style.Prefix.Font
+			}
+			if style.Prefix.Size != nil {
+				prefixInlineStyle.Size = *style.Prefix.Size
+			}
+			if style.Prefix.Color != nil {
+				prefixInlineStyle.Color = style.Prefix.Color
+			}
+		}
+	}
+
 	// Split on newlines to avoid Mail.app paragraph splitting breaking inline styles
 	text := buf.String()
 	lines := strings.Split(text, "\n")
 
 	for i, line := range lines {
-		lineText := line + "\n"
-		lineRuneCount := len([]rune(line))
+		lineText := prefix + line + "\n"
+		lineRuneCount := prefixRuneCount + len([]rune(line))
 
 		// Find inline styles that apply to this line
 		var lineInlineStyles []InlineStyle
+
+		// Add prefix inline style first if it has custom styling
+		if prefixInlineStyle != nil {
+			lineInlineStyles = append(lineInlineStyles, *prefixInlineStyle)
+		}
+
 		lineStartPos := 0
 		for j := 0; j < i; j++ {
 			lineStartPos += len([]rune(lines[j])) + 1 // +1 for newline
 		}
-		lineEndPos := lineStartPos + lineRuneCount
+		lineEndPos := lineStartPos + len([]rune(line))
 
-		// Filter and adjust inline styles for this line
+		// Filter and adjust inline styles for this line (offset by prefix length)
 		for _, inlineStyle := range allInlineStyles {
 			// Check if style overlaps with this line
 			if inlineStyle.End > lineStartPos && inlineStyle.Start < lineEndPos {
 				adjustedStyle := inlineStyle
-				// Adjust start position
+				// Adjust start position (add prefix offset)
 				if adjustedStyle.Start < lineStartPos {
-					adjustedStyle.Start = 0
+					adjustedStyle.Start = prefixRuneCount
 				} else {
-					adjustedStyle.Start = adjustedStyle.Start - lineStartPos
+					adjustedStyle.Start = adjustedStyle.Start - lineStartPos + prefixRuneCount
 				}
-				// Adjust end position
+				// Adjust end position (add prefix offset)
 				if adjustedStyle.End > lineEndPos {
 					adjustedStyle.End = lineRuneCount
 				} else {
-					adjustedStyle.End = adjustedStyle.End - lineStartPos
+					adjustedStyle.End = adjustedStyle.End - lineStartPos + prefixRuneCount
 				}
 				lineInlineStyles = append(lineInlineStyles, adjustedStyle)
 			}
 		}
 
-		// Add blockquote color as character-level style covering entire line
+		// Add blockquote color as character-level style covering entire line (including prefix)
 		if style.Color != nil {
 			colorStyle := InlineStyle{
 				Start: 0,

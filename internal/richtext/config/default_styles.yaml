@@ -79,7 +79,12 @@ styles:
     size: 11
     color: null
     margin_top: 6
-    margin_bottom: 6
+    margin_bottom: null
+    prefix:
+      content: "  "
+      font: null
+      size: null
+      color: null
 
   blockquote:
     font: "Helvetica-Oblique"
@@ -87,6 +92,11 @@ styles:
     color: null
     margin_top: 6
     margin_bottom: 6
+    prefix:
+      content: "  "
+      font: null
+      size: null
+      color: null
 
   list:
     margin_top: 6

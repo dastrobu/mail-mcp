@@ -20,19 +20,36 @@ type RenderingConfig struct {
 	Styles   map[string]StyleConfig `yaml:"styles"`
 }
 
+// PrefixConfig defines styling for a prefix (from YAML)
+type PrefixConfig struct {
+	Content *string `yaml:"content,omitempty"` // Text to prepend
+	Font    *string `yaml:"font,omitempty"`
+	Size    *int    `yaml:"size,omitempty"`
+	Color   *string `yaml:"color,omitempty"` // Web color format (#RRGGBB)
+}
+
 // StyleConfig defines raw styling properties from YAML (for parsing only)
 type StyleConfig struct {
-	Font         *string `yaml:"font,omitempty"`
-	Size         *int    `yaml:"size,omitempty"`
-	Color        *string `yaml:"color,omitempty"` // Web color format (#RRGGBB)
-	MarginTop    *int    `yaml:"margin_top,omitempty"`
-	MarginBottom *int    `yaml:"margin_bottom,omitempty"`
+	Font         *string       `yaml:"font,omitempty"`
+	Size         *int          `yaml:"size,omitempty"`
+	Color        *string       `yaml:"color,omitempty"` // Web color format (#RRGGBB)
+	MarginTop    *int          `yaml:"margin_top,omitempty"`
+	MarginBottom *int          `yaml:"margin_bottom,omitempty"`
+	Prefix       *PrefixConfig `yaml:"prefix,omitempty"` // Prefix styling
 }
 
 // PreparedConfig holds pre-computed styles ready for rendering.
 // All styles have defaults merged and colors converted to AppleRGB.
 type PreparedConfig struct {
 	styles map[string]PreparedStyle
+}
+
+// PreparedPrefix defines a fully resolved prefix style
+type PreparedPrefix struct {
+	Content *string
+	Font    *string
+	Size    *int
+	Color   *AppleRGB // Already converted, nil if not specified
 }
 
 // PreparedStyle defines a fully resolved style with colors already converted
@@ -42,6 +59,7 @@ type PreparedStyle struct {
 	Color        *AppleRGB // Already converted, nil if not specified
 	MarginTop    *int
 	MarginBottom *int
+	Prefix       *PreparedPrefix // Prefix styling
 }
 
 // AppleRGB represents Apple Mail's 16-bit RGB color format (0-65535)
@@ -147,6 +165,7 @@ func prepareConfig(config *RenderingConfig) (*PreparedConfig, error) {
 				Color:        defaultColor,
 				MarginTop:    nil,
 				MarginBottom: nil,
+				Prefix:       nil,
 			}
 			continue
 		}
@@ -158,6 +177,7 @@ func prepareConfig(config *RenderingConfig) (*PreparedConfig, error) {
 			Color:        defaultColor,
 			MarginTop:    nil,
 			MarginBottom: nil,
+			Prefix:       nil,
 		}
 
 		if rawStyle.Font != nil {
@@ -178,6 +198,13 @@ func prepareConfig(config *RenderingConfig) (*PreparedConfig, error) {
 		}
 		if rawStyle.MarginBottom != nil {
 			merged.MarginBottom = rawStyle.MarginBottom
+		}
+		if rawStyle.Prefix != nil {
+			preparedPrefix, err := preparePrefixConfig(rawStyle.Prefix, &merged)
+			if err != nil {
+				return nil, fmt.Errorf("failed to prepare prefix in style %s: %w", styleName, err)
+			}
+			merged.Prefix = preparedPrefix
 		}
 
 		styles[styleName] = merged
@@ -196,6 +223,7 @@ func prepareConfig(config *RenderingConfig) (*PreparedConfig, error) {
 			Color:        defaultColor,
 			MarginTop:    nil,
 			MarginBottom: nil,
+			Prefix:       nil,
 		}
 
 		if rawStyle.Font != nil {
@@ -217,11 +245,47 @@ func prepareConfig(config *RenderingConfig) (*PreparedConfig, error) {
 		if rawStyle.MarginBottom != nil {
 			merged.MarginBottom = rawStyle.MarginBottom
 		}
+		if rawStyle.Prefix != nil {
+			preparedPrefix, err := preparePrefixConfig(rawStyle.Prefix, &merged)
+			if err != nil {
+				return nil, fmt.Errorf("failed to prepare prefix in style %s: %w", styleName, err)
+			}
+			merged.Prefix = preparedPrefix
+		}
 
 		styles[styleName] = merged
 	}
 
 	return &PreparedConfig{styles: styles}, nil
+}
+
+// preparePrefixConfig converts a PrefixConfig to PreparedPrefix
+// Only sets fields that are explicitly provided in the prefix config.
+// If not provided, the field is nil and will inherit from parent during rendering.
+func preparePrefixConfig(prefix *PrefixConfig, parentStyle *PreparedStyle) (*PreparedPrefix, error) {
+	prepared := &PreparedPrefix{
+		Content: prefix.Content,
+		Font:    nil,
+		Size:    nil,
+		Color:   nil,
+	}
+
+	// Only set fields that are explicitly provided in prefix config
+	if prefix.Font != nil {
+		prepared.Font = prefix.Font
+	}
+	if prefix.Size != nil {
+		prepared.Size = prefix.Size
+	}
+	if prefix.Color != nil && *prefix.Color != "" {
+		rgb, err := webColorToAppleRGB(*prefix.Color)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert prefix color: %w", err)
+		}
+		prepared.Color = &rgb
+	}
+
+	return prepared, nil
 }
 
 // webColorToAppleRGB converts web color format (#RRGGBB) to Apple's 16-bit RGB format

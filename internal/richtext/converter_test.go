@@ -622,6 +622,140 @@ styles:
 	}
 }
 
+func TestConvertMarkdownToStyledBlocks_WithPrefix(t *testing.T) {
+	config, err := LoadConfig("")
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
+	tests := []struct {
+		name     string
+		markdown string
+		want     []StyledBlock
+	}{
+		{
+			name:     "code_block_with_prefix",
+			markdown: "```\nfirst line\nsecond line\n```",
+			want: []StyledBlock{
+				{
+					Type: BlockTypeCodeBlock,
+					Text: "  first line\n",
+					Font: "Menlo-Regular",
+					Size: 11,
+				},
+				{
+					Type: BlockTypeCodeBlock,
+					Text: "  second line\n",
+					Font: "Menlo-Regular",
+					Size: 11,
+				},
+				{
+					Type: BlockTypeCodeBlock,
+					Text: "  \n",
+					Font: "Menlo-Regular",
+					Size: 11,
+				},
+				// No margin_bottom block since config has margin_bottom: null
+			},
+		},
+		{
+			name:     "blockquote_with_prefix",
+			markdown: "> This is a quote\n> with multiple lines",
+			want: []StyledBlock{
+				{
+					Type: BlockTypeBlockquote,
+					Text: "  This is a quote with multiple lines\n",
+					Font: "Helvetica-Oblique",
+					Size: 12,
+				},
+				// Margin bottom block
+				{
+					Type: "",
+					Text: "\n",
+					Font: "Helvetica-Oblique",
+					Size: 6,
+				},
+			},
+		},
+		{
+			name:     "blockquote_with_bold_and_prefix",
+			markdown: "> This is **bold** text",
+			want: []StyledBlock{
+				{
+					Type:         BlockTypeBlockquote,
+					Text:         "  This is bold text\n",
+					Font:         "Helvetica-Oblique",
+					Size:         12,
+					InlineStyles: []InlineStyle{{Start: 10, End: 14, Font: "Helvetica-Bold"}},
+				},
+				// Margin bottom block
+				{
+					Type: "",
+					Text: "\n",
+					Font: "Helvetica-Oblique",
+					Size: 6,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			doc, err := ParseMarkdown([]byte(tt.markdown))
+			if err != nil {
+				t.Fatalf("ParseMarkdown() error = %v", err)
+			}
+
+			got, err := ConvertMarkdownToStyledBlocks(doc, []byte(tt.markdown), config)
+			if err != nil {
+				t.Fatalf("ConvertMarkdownToStyledBlocks() error = %v", err)
+			}
+
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %d blocks, want %d blocks", len(got), len(tt.want))
+			}
+
+			for i, gotBlock := range got {
+				wantBlock := tt.want[i]
+
+				if gotBlock.Type != wantBlock.Type {
+					t.Errorf("block %d: got type %q, want %q", i, gotBlock.Type, wantBlock.Type)
+				}
+				if gotBlock.Text != wantBlock.Text {
+					t.Errorf("block %d: got text %q, want %q", i, gotBlock.Text, wantBlock.Text)
+				}
+				if gotBlock.Font != wantBlock.Font {
+					t.Errorf("block %d: got font %q, want %q", i, gotBlock.Font, wantBlock.Font)
+				}
+				if gotBlock.Size != wantBlock.Size {
+					t.Errorf("block %d: got size %d, want %d", i, gotBlock.Size, wantBlock.Size)
+				}
+
+				// Only check inline styles if expected
+				if len(wantBlock.InlineStyles) > 0 {
+					if len(gotBlock.InlineStyles) != len(wantBlock.InlineStyles) {
+						t.Errorf("block %d: got %d inline styles, want %d", i, len(gotBlock.InlineStyles), len(wantBlock.InlineStyles))
+						continue
+					}
+
+					for j, gotStyle := range gotBlock.InlineStyles {
+						wantStyle := wantBlock.InlineStyles[j]
+						if gotStyle.Start != wantStyle.Start {
+							t.Errorf("block %d, style %d: got start %d, want %d", i, j, gotStyle.Start, wantStyle.Start)
+						}
+						if gotStyle.End != wantStyle.End {
+							t.Errorf("block %d, style %d: got end %d, want %d", i, j, gotStyle.End, wantStyle.End)
+						}
+						if gotStyle.Font != wantStyle.Font {
+							t.Errorf("block %d, style %d: got font %q, want %q", i, j, gotStyle.Font, wantStyle.Font)
+						}
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestConvertMarkdownToStyledBlocks_ComplexDocument(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "test_styles_complex.yaml")
