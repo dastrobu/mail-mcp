@@ -22,7 +22,7 @@ func RegisterGetSelectedMessages(srv *mcp.Server) {
 	mcp.AddTool(srv,
 		&mcp.Tool{
 			Name:        "get_selected_messages",
-			Description: "Gets the currently selected message(s) in Mail.app. Returns details about selected messages in the frontmost Mail viewer window, limited by the 'limit' parameter.",
+			Description: "Gets the currently selected message(s) in Mail.app.",
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "Get Selected Messages",
 				ReadOnlyHint:    true,

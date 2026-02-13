@@ -22,7 +22,7 @@ func RegisterListAccounts(srv *mcp.Server) {
 	mcp.AddTool(srv,
 		&mcp.Tool{
 			Name:        "list_accounts",
-			Description: "Lists all configured email accounts in Apple Mail with their properties. Filter to only show enabled or all accounts.",
+			Description: "Lists all configured email accounts in Apple Mail with their properties.",
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "List Mail Accounts",
 				ReadOnlyHint:    true,
