@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{.Label}}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{.BinaryPath}}</string>
+        <string>--transport=http</string>
+        <string>--host={{.Host}}</string>
+        <string>--port={{.Port}}</string>{{if .Debug}}
+        <string>--debug</string>{{else}}
+        <!-- Uncomment to enable debug logging:
+        <string>--debug</string>
+        -->{{end}}
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>{{.LogPath}}</string>
+    <key>StandardErrorPath</key>
+    <string>{{.ErrPath}}</string>
+</dict>
+</plist>

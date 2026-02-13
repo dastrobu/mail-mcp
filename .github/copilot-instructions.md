@@ -10,14 +10,14 @@ An MCP (Model Context Protocol) server providing programmatic access to macOS Ma
 - Go 1.26+
 - MCP Go SDK v1.2.0+ (github.com/modelcontextprotocol/go-sdk)
 - JXA (JavaScript for Automation) for Mail.app interaction
-- STDIO transport for MCP communication
+- HTTP and STDIO transports for MCP communication (HTTP recommended for automation permissions)
 
 ## Architecture
 
 ### Core Principles
 
 1. **Single Binary**: All JXA scripts are embedded using `//go:embed` to create a self-contained executable
-2. **STDIO Only**: Server uses STDIO transport exclusively (no HTTP/SSE)
+2. **Dual Transport**: Supports both HTTP (recommended) and STDIO transports
 3. **Modular Design**: Each tool is in its own file within `internal/tools/` for maintainability
 4. **macOS Only**: Relies on Mail.app and JXA, which are macOS-specific
 5. **Nested Mailbox Support**: All tools support hierarchical mailboxes via mailbox path arrays
@@ -32,6 +32,91 @@ An MCP (Model Context Protocol) server providing programmatic access to macOS Ma
 - Prefer `any` over `interface{}` for better readability
 - Use `context.Context` for all operations
 - Handle errors explicitly - never ignore them
+
+### Typed Flags
+
+Use typed flags for better validation and completion support:
+
+```go
+// internal/opts/typed_flags/transport_flag.go
+type Transport string
+
+const (
+    TransportStdio Transport = "stdio"
+    TransportHTTP  Transport = "http"
+)
+
+var TransportValues = []Transport{
+    TransportStdio,
+    TransportHTTP,
+}
+
+// Implement flags.Completer and flags.Unmarshaler
+func (t *Transport) Complete(match string) (completions []flags.Completion)
+func (t *Transport) UnmarshalFlag(value string) error
+```
+
+**Benefits:**
+- Type safety
+- Automatic validation
+- Tab completion support
+- Clear valid values
+
+### Subcommands
+
+The server supports subcommands for managing launchd services:
+
+```bash
+# Run the server (default command)
+./apple-mail-mcp
+./apple-mail-mcp --transport=http
+
+# Set up launchd service (HTTP mode, no Terminal parent process)
+./apple-mail-mcp launchd create
+./apple-mail-mcp --port=3000 launchd create
+./apple-mail-mcp --debug launchd create  # With debug logging
+
+# Remove launchd service
+./apple-mail-mcp launchd remove
+```
+
+**Implementation:**
+- Commands are parsed in `internal/opts/opts.go`
+- `launchd` is a main command with subcommands: `create` and `remove`
+- Launchd logic is in `internal/launchd/setup.go`
+- Main command handler is in `main.go`
+
+**Why launchd?** When launched via launchd, the binary runs without a parent process, so macOS grants automation permissions to the binary itself rather than Terminal or another parent application.
+
+**Service Label:** `com.github.dastrobu.apple-mail-mcp`
+
+### Bash Completion
+
+The server supports bash completion for commands and flags:
+
+```bash
+# Generate completion script
+./apple-mail-mcp completion bash > /usr/local/etc/bash_completion.d/apple-mail-mcp
+
+# Or source directly
+source <(./apple-mail-mcp completion bash)
+```
+
+**Implementation:**
+- `internal/completion/bash.go` - Generates bash completion script
+- `internal/opts/typed_flags/*.go` - Typed flags implement `flags.Completer`
+- go-flags automatically provides completion via `GO_FLAGS_COMPLETION=1` env var
+
+**Testing completion:**
+```bash
+GO_FLAGS_COMPLETION=1 ./apple-mail-mcp --transport=
+# Output: --transport=http, --transport=stdio
+
+GO_FLAGS_COMPLETION=1 ./apple-mail-mcp launchd ""
+# Output: create, remove
+```
+
+**Note:** Zsh completion is not currently supported due to compatibility issues with the go-flags completion system.
 
 ### MCP Server Implementation
 
@@ -631,7 +716,7 @@ func myHandler(ctx context.Context, request *mcp.CallToolRequest, input MyInput)
 1. **macOS Only**: Mail.app and JXA are macOS-specific
 2. **Mail.app Required**: Mail.app must be running for operations to succeed
 3. **Read-Only**: Never implement operations that modify mail data
-4. **STDIO Transport**: Only support stdio, no HTTP/SSE
+4. **Dual Transport Support**: HTTP transport is recommended (permissions go to binary) vs STDIO (permissions go to parent process)
 5. **No External State**: Keep server stateless for simplicity
 
 ## Security Considerations
@@ -640,7 +725,81 @@ func myHandler(ctx context.Context, request *mcp.CallToolRequest, input MyInput)
 - No sending emails or modifying messages
 - Server runs locally on user's machine
 - Mail.app's security and permissions apply
+- **HTTP mode recommended**: Automation permissions are granted to the `apple-mail-mcp` binary itself
+- **STDIO mode caveat**: Automation permissions are granted to the parent process (Terminal, Claude Desktop, etc.)
 - Never log sensitive email content
+
+## Launchd Service Management
+
+The `internal/launchd` package provides programmatic launchd management, split into focused modules:
+
+**Constants (common.go):**
+- `Label` - Service identifier: `com.github.dastrobu.apple-mail-mcp`
+- `DefaultPort` - Default HTTP port: `8787`
+- `DefaultHost` - Default HTTP host: `localhost`
+- `DefaultLogPath` - Default log path: `~/Library/Logs/com.github.dastrobu.apple-mail-mcp/apple-mail-mcp.log`
+- `DefaultErrPath` - Default error log path: `~/Library/Logs/com.github.dastrobu.apple-mail-mcp/apple-mail-mcp.err`
+
+**Key Functions:**
+- `Create(cfg *Config)` - Creates plist, loads service (`create.go`)
+  - Supports debug flag via `cfg.Debug` field
+  - If unsuccessful, prints hint about enabling debug logging
+- `Remove()` - Unloads service, removes plist (`remove.go`)
+- `IsLoaded()` - Checks if service is running (`common.go`)
+- `DefaultConfig()` - Returns config with executable path (`create.go`)
+- `PlistPath()` - Returns path to plist file (`common.go`)
+
+**Usage Pattern:**
+**Implementation Pattern:**
+```go
+cfg, err := launchd.DefaultConfig()
+if err != nil {
+    return err
+}
+
+// Override defaults from command-line flags
+cfg.Port = options.Port
+cfg.Host = options.Host
+cfg.Debug = options.Debug
+
+// Create the service
+return launchd.Create(cfg)
+```
+
+**Command Structure:**
+- Main command: `launchd`
+- Subcommands: `create`, `remove`
+- Examples: `./apple-mail-mcp launchd create`, `./apple-mail-mcp launchd remove`
+
+**Files:**
+- `internal/launchd/common.go` - Shared constants and utility functions
+- `internal/launchd/create.go` - Service creation logic (`Create()`), embeds plist template
+- `internal/launchd/templates/launchd.plist.tmpl` - Launchd plist template (embedded)
+- `internal/launchd/remove.go` - Service removal logic (`Remove()`)
+- `main.go` - Command handling (`createLaunchd()`, `removeLaunchd()`)
+- `internal/opts/opts.go` - Command and subcommand parsing
+- `internal/opts/typed_flags/` - Typed flag implementations
+- `internal/completion/bash.go` - Bash completion generation
+
+**Template Embedding:**
+```go
+// create.go
+//go:embed templates/launchd.plist.tmpl
+var plistTemplate string
+```
+
+The plist template is embedded at compile time from `internal/launchd/templates/launchd.plist.tmpl`, ensuring the binary is self-contained.
+
+**Debug Flag:**
+The template conditionally includes the `--debug` flag based on `cfg.Debug`:
+- When enabled: `<string>--debug</string>` is added to ProgramArguments
+- When disabled: A commented hint is included showing how to enable it
+
+**Log Directory:**
+The service creates `~/Library/Logs/com.github.dastrobu.apple-mail-mcp/` directory automatically and writes logs there (standard macOS location for application logs).
+
+**Error Messages:**
+All error messages in launchd package start with emojis (❌ for errors, ⚠️ for warnings) for better visibility.
 
 ## Documentation
 

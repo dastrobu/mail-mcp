@@ -3,6 +3,8 @@ package opts
 import (
 	"os"
 	"testing"
+
+	"github.com/dastrobu/apple-mail-mcp/internal/opts/typed_flags"
 )
 
 func TestParse_DefaultValues(t *testing.T) {
@@ -13,21 +15,21 @@ func TestParse_DefaultValues(t *testing.T) {
 	// Set args to just the program name (no flags)
 	os.Args = []string{"apple-mail-mcp"}
 
-	opts, err := Parse()
+	_, err := Parse()
 	if err != nil {
 		t.Fatalf("Parse() failed with default values: %v", err)
 	}
 
-	if opts.Transport != "stdio" {
-		t.Errorf("Expected default transport 'stdio', got '%s'", opts.Transport)
+	if GlobalOpts.Transport != typed_flags.TransportStdio {
+		t.Errorf("Expected default transport 'stdio', got '%s'", GlobalOpts.Transport)
 	}
 
-	if opts.Port != 8787 {
-		t.Errorf("Expected default port 8787, got %d", opts.Port)
+	if GlobalOpts.Port != 8787 {
+		t.Errorf("Expected default port 8787, got %d", GlobalOpts.Port)
 	}
 
-	if opts.Host != "localhost" {
-		t.Errorf("Expected default host 'localhost', got '%s'", opts.Host)
+	if GlobalOpts.Host != "localhost" {
+		t.Errorf("Expected default host 'localhost', got '%s'", GlobalOpts.Host)
 	}
 }
 
@@ -37,13 +39,13 @@ func TestParse_StdioTransport(t *testing.T) {
 
 	os.Args = []string{"apple-mail-mcp", "--transport=stdio"}
 
-	opts, err := Parse()
+	_, err := Parse()
 	if err != nil {
-		t.Fatalf("Parse() failed with stdio transport: %v", err)
+		t.Fatalf("Parse() failed: %v", err)
 	}
 
-	if opts.Transport != "stdio" {
-		t.Errorf("Expected transport 'stdio', got '%s'", opts.Transport)
+	if GlobalOpts.Transport != typed_flags.TransportStdio {
+		t.Errorf("Expected transport 'stdio', got '%s'", GlobalOpts.Transport)
 	}
 }
 
@@ -53,13 +55,13 @@ func TestParse_HTTPTransport(t *testing.T) {
 
 	os.Args = []string{"apple-mail-mcp", "--transport=http"}
 
-	opts, err := Parse()
+	_, err := Parse()
 	if err != nil {
-		t.Fatalf("Parse() failed with http transport: %v", err)
+		t.Fatalf("Parse() failed: %v", err)
 	}
 
-	if opts.Transport != "http" {
-		t.Errorf("Expected transport 'http', got '%s'", opts.Transport)
+	if GlobalOpts.Transport != typed_flags.TransportHTTP {
+		t.Errorf("Expected transport 'http', got '%s'", GlobalOpts.Transport)
 	}
 }
 
@@ -67,19 +69,19 @@ func TestParse_HTTPWithCustomPort(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	os.Args = []string{"apple-mail-mcp", "--transport=http", "--port=3000"}
+	os.Args = []string{"apple-mail-mcp", "--transport=http", "--port=4567"}
 
-	opts, err := Parse()
+	_, err := Parse()
 	if err != nil {
-		t.Fatalf("Parse() failed with custom port: %v", err)
+		t.Fatalf("Parse() failed: %v", err)
 	}
 
-	if opts.Transport != "http" {
-		t.Errorf("Expected transport 'http', got '%s'", opts.Transport)
+	if GlobalOpts.Transport != typed_flags.TransportHTTP {
+		t.Errorf("Expected transport 'http', got '%s'", GlobalOpts.Transport)
 	}
 
-	if opts.Port != 3000 {
-		t.Errorf("Expected port 3000, got %d", opts.Port)
+	if GlobalOpts.Port != 4567 {
+		t.Errorf("Expected port 4567, got %d", GlobalOpts.Port)
 	}
 }
 
@@ -89,21 +91,21 @@ func TestParse_HTTPWithCustomHost(t *testing.T) {
 
 	os.Args = []string{"apple-mail-mcp", "--transport=http", "--host=0.0.0.0", "--port=9000"}
 
-	opts, err := Parse()
+	_, err := Parse()
 	if err != nil {
 		t.Fatalf("Parse() failed with custom host: %v", err)
 	}
 
-	if opts.Transport != "http" {
-		t.Errorf("Expected transport 'http', got '%s'", opts.Transport)
+	if GlobalOpts.Transport != typed_flags.TransportHTTP {
+		t.Errorf("Expected transport 'http', got '%s'", GlobalOpts.Transport)
 	}
 
-	if opts.Host != "0.0.0.0" {
-		t.Errorf("Expected host '0.0.0.0', got '%s'", opts.Host)
+	if GlobalOpts.Host != "0.0.0.0" {
+		t.Errorf("Expected host '0.0.0.0', got '%s'", GlobalOpts.Host)
 	}
 
-	if opts.Port != 9000 {
-		t.Errorf("Expected port 9000, got %d", opts.Port)
+	if GlobalOpts.Port != 9000 {
+		t.Errorf("Expected port 9000, got %d", GlobalOpts.Port)
 	}
 }
 
@@ -136,11 +138,11 @@ func TestParse_InvalidPort(t *testing.T) {
 
 			os.Args = []string{"apple-mail-mcp", "--transport=http", "--port=" + tt.port}
 
-			opts, err := Parse()
+			_, err := Parse()
 			// The flags library might catch this before our validation
 			if err == nil {
 				// If flags didn't catch it, our validation should
-				if opts.Port < 1 || opts.Port > 65535 {
+				if GlobalOpts.Port < 1 || GlobalOpts.Port > 65535 {
 					// This is expected - validation worked
 					return
 				}
@@ -154,28 +156,23 @@ func TestParse_AllOptions(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	os.Args = []string{
-		"apple-mail-mcp",
-		"--transport=http",
-		"--host=127.0.0.1",
-		"--port=4567",
-	}
+	os.Args = []string{"apple-mail-mcp", "--transport=http", "--host=127.0.0.1", "--port=4567", "--debug"}
 
-	opts, err := Parse()
+	_, err := Parse()
 	if err != nil {
-		t.Fatalf("Parse() failed with all options: %v", err)
+		t.Fatalf("Parse() failed: %v", err)
 	}
 
-	if opts.Transport != "http" {
-		t.Errorf("Expected transport 'http', got '%s'", opts.Transport)
+	if GlobalOpts.Transport != typed_flags.TransportHTTP {
+		t.Errorf("Expected transport 'http', got '%s'", GlobalOpts.Transport)
 	}
 
-	if opts.Host != "127.0.0.1" {
-		t.Errorf("Expected host '127.0.0.1', got '%s'", opts.Host)
+	if GlobalOpts.Host != "127.0.0.1" {
+		t.Errorf("Expected host '127.0.0.1', got '%s'", GlobalOpts.Host)
 	}
 
-	if opts.Port != 4567 {
-		t.Errorf("Expected port 4567, got %d", opts.Port)
+	if GlobalOpts.Port != 4567 {
+		t.Errorf("Expected port 4567, got %d", GlobalOpts.Port)
 	}
 }
 
@@ -184,32 +181,32 @@ func TestParse_EnvironmentVariables(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	// Set environment variables
-	os.Setenv("TRANSPORT", "http")
-	os.Setenv("PORT", "9999")
-	os.Setenv("HOST", "0.0.0.0")
+	os.Setenv("APPLE_MAIL_MCP_TRANSPORT", "http")
+	os.Setenv("APPLE_MAIL_MCP_PORT", "9999")
+	os.Setenv("APPLE_MAIL_MCP_HOST", "0.0.0.0")
 	defer func() {
-		os.Unsetenv("TRANSPORT")
-		os.Unsetenv("PORT")
-		os.Unsetenv("HOST")
+		os.Unsetenv("APPLE_MAIL_MCP_TRANSPORT")
+		os.Unsetenv("APPLE_MAIL_MCP_PORT")
+		os.Unsetenv("APPLE_MAIL_MCP_HOST")
 	}()
 
 	os.Args = []string{"apple-mail-mcp"}
 
-	opts, err := Parse()
+	_, err := Parse()
 	if err != nil {
 		t.Fatalf("Parse() failed with environment variables: %v", err)
 	}
 
-	if opts.Transport != "http" {
-		t.Errorf("Expected transport 'http' from env, got '%s'", opts.Transport)
+	if GlobalOpts.Transport != typed_flags.TransportHTTP {
+		t.Errorf("Expected transport 'http', got '%s'", GlobalOpts.Transport)
 	}
 
-	if opts.Port != 9999 {
-		t.Errorf("Expected port 9999 from env, got %d", opts.Port)
+	if GlobalOpts.Port != 9999 {
+		t.Errorf("Expected port 9999, got %d", GlobalOpts.Port)
 	}
 
-	if opts.Host != "0.0.0.0" {
-		t.Errorf("Expected host '0.0.0.0' from env, got '%s'", opts.Host)
+	if GlobalOpts.Host != "0.0.0.0" {
+		t.Errorf("Expected host '0.0.0.0', got '%s'", GlobalOpts.Host)
 	}
 }
 
@@ -218,26 +215,25 @@ func TestParse_FlagsOverrideEnvironment(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	// Set environment variables
-	os.Setenv("TRANSPORT", "http")
-	os.Setenv("PORT", "9999")
+	os.Setenv("APPLE_MAIL_MCP_TRANSPORT", "stdio")
+	os.Setenv("APPLE_MAIL_MCP_PORT", "5000")
 	defer func() {
-		os.Unsetenv("TRANSPORT")
-		os.Unsetenv("PORT")
+		os.Unsetenv("APPLE_MAIL_MCP_TRANSPORT")
+		os.Unsetenv("APPLE_MAIL_MCP_PORT")
 	}()
 
 	// Flags should override environment
-	os.Args = []string{"apple-mail-mcp", "--transport=stdio", "--port=3000"}
+	os.Args = []string{"apple-mail-mcp", "--transport=http", "--port=6000"}
 
-	opts, err := Parse()
+	_, err := Parse()
 	if err != nil {
 		t.Fatalf("Parse() failed: %v", err)
 	}
 
-	if opts.Transport != "stdio" {
-		t.Errorf("Expected transport 'stdio' (flag override), got '%s'", opts.Transport)
+	if GlobalOpts.Transport != typed_flags.TransportHTTP {
+		t.Errorf("Expected transport 'http' from flag, got '%s'", GlobalOpts.Transport)
 	}
-
-	if opts.Port != 3000 {
-		t.Errorf("Expected port 3000 (flag override), got %d", opts.Port)
+	if GlobalOpts.Port != 6000 {
+		t.Errorf("Expected port 6000 from flag, got %d", GlobalOpts.Port)
 	}
 }

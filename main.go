@@ -8,7 +8,9 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/dastrobu/apple-mail-mcp/internal/completion"
 	"github.com/dastrobu/apple-mail-mcp/internal/jxa"
+	"github.com/dastrobu/apple-mail-mcp/internal/launchd"
 	applog "github.com/dastrobu/apple-mail-mcp/internal/log"
 	"github.com/dastrobu/apple-mail-mcp/internal/opts"
 	"github.com/dastrobu/apple-mail-mcp/internal/richtext"
@@ -22,13 +24,32 @@ const (
 )
 
 func main() {
+	// Set up command handlers before parsing
+	opts.GlobalOpts.Completion.Bash.Handler = func() error {
+		completion.GenerateBash()
+		return nil
+	}
+	opts.GlobalOpts.Launchd.Create.Handler = func() error {
+		return createLaunchd(&opts.GlobalOpts)
+	}
+	opts.GlobalOpts.Launchd.Remove.Handler = func() error {
+		return removeLaunchd()
+	}
+
 	// Parse command-line options
-	options, err := opts.Parse()
+	parser, err := opts.Parse()
 	if err != nil {
 		log.Fatalf("Failed to parse options: %v", err)
 	}
 
-	if err := run(options); err != nil {
+	// Check if a command was executed
+	if parser.Command.Active != nil {
+		// Command was executed via Execute() method
+		return
+	}
+
+	// No command specified - run the server
+	if err := run(&opts.GlobalOpts); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}
 }
@@ -94,6 +115,9 @@ func createServer(options *opts.Options, richtextConfig *richtext.PreparedConfig
 }
 
 func run(options *opts.Options) error {
+	// Convert Transport to string for comparison
+	transport := string(options.Transport)
+
 	ctx := context.Background()
 
 	// Always add a logger to context (real logger if debug, no-op otherwise)
@@ -146,7 +170,7 @@ For detailed troubleshooting, see: https://github.com/dastrobu/apple-mail-mcp#tr
 	srv := createServer(options, richtextConfig)
 
 	// Run the server with the selected transport
-	switch options.Transport {
+	switch transport {
 	case "stdio":
 		log.Println("Using STDIO transport")
 		if err := srv.Run(ctx, &mcp.StdioTransport{}); err != nil {
@@ -178,8 +202,34 @@ For detailed troubleshooting, see: https://github.com/dastrobu/apple-mail-mcp#tr
 			return fmt.Errorf("HTTP server error: %w", err)
 		}
 	default:
-		return fmt.Errorf("unsupported transport: %s", options.Transport)
+		return fmt.Errorf("unsupported transport: %s", transport)
 	}
 
 	return nil
+}
+
+// createLaunchd creates the launchd service
+func createLaunchd(options *opts.Options) error {
+	cfg, err := launchd.DefaultConfig()
+	if err != nil {
+		return err
+	}
+
+	// Override defaults with command-line options if provided
+	if options.Host != launchd.DefaultHost {
+		cfg.Host = options.Host
+	}
+	if options.Port != launchd.DefaultPort {
+		cfg.Port = options.Port
+	}
+	if options.Debug {
+		cfg.Debug = options.Debug
+	}
+
+	return launchd.Create(cfg)
+}
+
+// removeLaunchd removes the launchd service
+func removeLaunchd() error {
+	return launchd.Remove()
 }

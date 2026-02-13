@@ -30,7 +30,7 @@ This MCP server enables AI assistants and other MCP clients to interact with App
 - macOS (Mail.app is macOS-only)
 - Go 1.26 or later
 - Mail.app must be running and configured with at least one email account
-- Automation permissions for the terminal/application running the server
+- Automation permissions (see [Automation Permissions](#automation-permissions) below)
 
 ## Installation
 
@@ -40,18 +40,99 @@ go build -o apple-mail-mcp
 
 ## Usage
 
-The server supports two transport modes: STDIO (default) and HTTP.
+The server supports two transport modes: **HTTP (recommended)** and STDIO.
 
-### STDIO Transport (Default)
+### HTTP Transport (Recommended)
+
+HTTP mode runs the server as a standalone daemon, allowing automation permissions to be granted directly to the `apple-mail-mcp` binary rather than the parent application.
+
+**Important:** To get permissions granted to the binary (not Terminal), you must launch it without Terminal as the parent process.
+
+#### Option 1: Using launchd (Recommended for Production)
+
+Create a launch agent to run the server in the background.
+
+**Quick setup using the built-in subcommand:**
 
 ```bash
-./apple-mail-mcp
+# Run the setup subcommand
+./apple-mail-mcp launchd create
+
+# With custom port
+./apple-mail-mcp --port=3000 launchd create
+
+# With debug logging enabled
+./apple-mail-mcp --debug launchd create
+
+# The subcommand will:
+# - Create the launchd plist
+# - Load and start the service
+# - Show you the connection URL and useful commands
 ```
 
-### HTTP Transport
+**To remove the service:**
 
 ```bash
-# Default port 8787
+./apple-mail-mcp launchd remove
+```
+
+**Manual setup (alternative):**
+
+```bash
+# Create launch agent directory if needed
+mkdir -p ~/Library/LaunchAgents
+
+# Create launch agent plist
+cat > ~/Library/LaunchAgents/com.apple-mail-mcp.plist << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.apple-mail-mcp</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/path/to/apple-mail-mcp</string>
+        <string>--transport=http</string>
+        <string>--port=8787</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/apple-mail-mcp.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/apple-mail-mcp.err</string>
+</dict>
+</plist>
+EOF
+
+# Update the path to your actual binary location
+# Load and start the service
+launchctl load ~/Library/LaunchAgents/com.github.dastrobu.apple-mail-mcp.plist
+launchctl start com.apple-mail-mcp
+```
+
+Check logs: `tail -f ~/Library/Logs/com.github.dastrobu.apple-mail-mcp/apple-mail-mcp.log ~/Library/Logs/com.github.dastrobu.apple-mail-mcp/apple-mail-mcp.err`
+
+To stop: `launchctl stop com.github.dastrobu.apple-mail-mcp`
+To unload: `launchctl unload ~/Library/LaunchAgents/com.github.dastrobu.apple-mail-mcp.plist`
+
+#### Option 2: Double-Click in Finder
+
+1. Open Finder and navigate to the directory containing `apple-mail-mcp`
+2. Double-click the binary
+3. macOS will prompt for permission for the `apple-mail-mcp` binary itself
+
+**Note:** Double-clicking won't allow you to pass command-line arguments. To use custom settings, use launchd or create a wrapper script.
+
+#### Option 3: Running from Terminal (Quick Testing)
+
+If you launch from Terminal, **Terminal will be asked for permissions**, not the binary:
+
+```bash
+# This will prompt for Terminal's permissions (not ideal)
 ./apple-mail-mcp --transport=http
 
 # Custom port
@@ -60,6 +141,28 @@ The server supports two transport modes: STDIO (default) and HTTP.
 # Custom host and port
 ./apple-mail-mcp --transport=http --host=0.0.0.0 --port=3000
 ```
+
+This is fine for quick testing, but for production use launchd (Option 1) or Finder (Option 2).
+
+**Connect MCP clients to:** `http://localhost:8787`
+
+### STDIO Transport
+
+STDIO mode runs the server as a child process of the MCP client. Note that automation permissions will be required for the parent application (Terminal, Claude Desktop, etc.).
+
+```bash
+./apple-mail-mcp
+```
+
+### Understanding Parent Process and Permissions
+
+**Key Insight:** macOS grants automation permissions to the **process that launches the binary**, not the binary itself.
+
+- **Launching from Terminal** (even with `--transport=http`): Terminal becomes the parent process, so Terminal gets the permission
+- **Launching via launchd**: No parent process, so the `apple-mail-mcp` binary itself gets the permission
+- **Launching via Finder** (double-click): Similar to launchd, the binary gets the permission
+
+This is why **HTTP mode with launchd** is recommended - it ensures the binary (not Terminal or other applications) receives the automation permissions.
 
 ### Command-Line Options
 
@@ -70,15 +173,22 @@ The server supports two transport modes: STDIO (default) and HTTP.
 --debug                  Enable debug logging of tool calls and results to stderr
 --rich-text-styles=PATH  Path to custom rich text styles YAML file (uses embedded default if not specified)
 --help                   Show help message
+
+Commands:
+  launchd create         Set up launchd service for automatic startup (HTTP mode)
+                         Use --debug flag to enable debug logging in the service
+  launchd remove         Remove launchd service
+  completion bash        Generate bash completion script
 ```
+
 
 Options can also be set via environment variables:
 ```
-TRANSPORT=http
-PORT=8787
-HOST=localhost
-DEBUG=true
-RICH_TEXT_STYLES=/path/to/custom_styles.yaml
+APPLE_MAIL_MCP_TRANSPORT=http
+APPLE_MAIL_MCP_PORT=8787
+APPLE_MAIL_MCP_HOST=localhost
+APPLE_MAIL_MCP_DEBUG=true
+APPLE_MAIL_MCP_RICH_TEXT_STYLES=/path/to/custom_styles.yaml
 ```
 
 ### Debug Mode
@@ -89,10 +199,54 @@ When `--debug` is enabled, the server logs all MCP protocol interactions and JXA
 ./apple-mail-mcp --debug
 ```
 
+### Bash Completion
+
+Enable tab completion for commands and flags:
+
+```bash
+# Generate completion script
+apple-mail-mcp completion bash > /usr/local/etc/bash_completion.d/apple-mail-mcp
+
+# Or add to your ~/.bashrc or ~/.bash_profile
+source <(./apple-mail-mcp completion bash)
+```
+
+After sourcing, you can use tab completion:
+```bash
+./apple-mail-mcp --transport=<TAB>    # Completes: http, stdio
+./apple-mail-mcp launchd <TAB>        # Completes: create, remove
+```
+
 ### Configuration
 
-#### For STDIO Transport
+#### Claude Desktop Configuration
 
+**HTTP Transport (Recommended):**
+
+1. Start the server using launchd (recommended) or Finder (see [HTTP Transport](#http-transport-recommended) section):
+   ```bash
+   ./apple-mail-mcp launchd create
+   ```
+   
+   Or for quick testing from Terminal:
+   ```bash
+   ./apple-mail-mcp --transport=http
+   ```
+
+2. Configure Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+   ```json
+   {
+     "mcpServers": {
+       "apple-mail": {
+         "url": "http://localhost:8787"
+       }
+     }
+   }
+   ```
+
+**STDIO Transport:**
+
+Configure Claude Desktop to launch the server as a child process:
 ```json
 {
   "mcpServers": {
@@ -103,11 +257,68 @@ When `--debug` is enabled, the server logs all MCP protocol interactions and JXA
 }
 ```
 
-#### For HTTP Transport
+**Note:** With STDIO, Claude Desktop will need automation permissions. With HTTP, only the `apple-mail-mcp` binary needs permissions.
 
+## Automation Permissions
+
+macOS requires automation permissions to control Mail.app. The permission behavior depends on which transport mode you use:
+
+### HTTP Transport (Recommended)
+
+When using `--transport=http`, permissions can be granted to the `apple-mail-mcp` binary itself, **but only if launched without Terminal as the parent process**.
+
+**Using launchd (recommended):**
+1. Set up the launchd service: `./apple-mail-mcp launchd create`
+2. macOS will prompt for automation permissions for `apple-mail-mcp` binary
+3. Click **OK** to grant access
+4. The server is now ready to use
+
+**Using Finder:**
+1. Double-click the `apple-mail-mcp` binary in Finder
+2. macOS will prompt for automation permissions for `apple-mail-mcp` binary
+3. Click **OK** to grant access
+
+**Using Terminal (quick testing only):**
+1. Run `./apple-mail-mcp --transport=http` from Terminal
+2. macOS will prompt for automation permissions for **Terminal.app** (not the binary)
+3. Click **OK** to grant access to Terminal
+4. Note: This grants permission to Terminal, not the binary
+
+**Advantage:** With launchd or Finder launch, permissions stay with the binary and work with all MCP clients. With Terminal launch, only Terminal gets permissions.
+
+### STDIO Transport
+
+When using STDIO mode (default), permissions are granted to the **parent process** (Terminal, Claude Desktop, etc.) that launches the server:
+
+1. Start the server (or let your MCP client start it)
+2. macOS will prompt for automation permissions on first run
+3. Click **OK** to grant access to the parent application
+4. The server is now ready to use
+
+**Note:** If you switch between different applications (e.g., Terminal vs Claude Desktop), each will need its own automation permission.
+
+### Manual Permission Configuration
+
+If the prompt doesn't appear or you need to change permissions:
+
+1. Open **System Settings** → **Privacy & Security** → **Automation**
+2. Find `apple-mail-mcp` (HTTP mode) or the parent application (STDIO mode)
+3. Enable the checkbox next to **Mail**
+4. Restart the server
+
+### Resetting Permissions
+
+To reset automation permissions (useful for testing or troubleshooting):
+
+```bash
+# Reset all automation permissions (will prompt again on next run)
+tccutil reset AppleEvents
+
+# Reset for a specific application (e.g., Terminal)
+tccutil reset AppleEvents com.apple.Terminal
 ```
-http://localhost:8787
-```
+
+After resetting, the next time the server tries to control Mail.app, macOS will show the permission prompt again.
 
 ## Troubleshooting
 
@@ -118,16 +329,7 @@ If you see:
 Mail.app startup check failed: osascript execution failed: signal: killed
 ```
 
-Grant automation permissions:
-
-1. Open **System Settings** → **Privacy & Security** → **Automation**
-2. Find the application running the server (Terminal, Claude, etc.)
-3. Enable the checkbox next to **Mail**
-4. Restart the MCP server
-
-**Alternative:** Run the server from Terminal to trigger the permission prompt, then click **OK**.
-
-**Note:** You may need to restart the application running the MCP server for changes to take effect.
+**Solution:** Grant automation permissions using the steps in [Automation Permissions](#automation-permissions) above.
 
 ### Mail.app Not Running
 
