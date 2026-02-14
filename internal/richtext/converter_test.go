@@ -508,6 +508,41 @@ styles:
 				}
 			},
 		},
+		{
+			name:       "code block in list item",
+			markdown:   "1. Install tool:\n    ```bash\n    brew install apple-mail-mcp\n    ```",
+			wantBlocks: 3, // List item + code block line + trailing empty line from code block
+			checkFunc: func(t *testing.T, blocks []StyledBlock) {
+				// First block is the list item itself
+				if blocks[0].Type != BlockTypeListItem {
+					t.Errorf("Block 0: expected list_item, got %s", blocks[0].Type)
+				}
+				if blocks[0].Text != "1. Install tool:\n" {
+					t.Errorf("Block 0: expected text '1. Install tool:\\n', got %q", blocks[0].Text)
+				}
+
+				// Second block is the code block line, indented to align with list text
+				if blocks[1].Type != BlockTypeCodeBlock {
+					t.Errorf("Block 1: expected code_block, got %s", blocks[1].Type)
+				}
+				// "1. " is 3 chars, so sub-indent is 3 spaces.
+				// Code block line starts with sub-indent (3 spaces)
+				// The code block prefix (2 spaces) is NOT added automatically because we use
+				// a custom config for these tests where code_block prefix content is empty
+				expectedCodeLine := "   brew install apple-mail-mcp\n"
+				if blocks[1].Text != expectedCodeLine {
+					t.Errorf("Block 1: expected text %q, got %q", expectedCodeLine, blocks[1].Text)
+				}
+
+				// Third block is the trailing empty line from the code block
+				if blocks[2].Type != BlockTypeCodeBlock {
+					t.Errorf("Block 2: expected code_block (empty line), got %s", blocks[2].Type)
+				}
+				if blocks[2].Text != "   \n" {
+					t.Errorf("Block 2: expected sub-indented empty line '   \\n', got %q", blocks[2].Text)
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {

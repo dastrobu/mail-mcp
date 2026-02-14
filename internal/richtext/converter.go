@@ -52,68 +52,17 @@ func ConvertMarkdownToStyledBlocks(root ast.Node, source []byte, config *Prepare
 			return ast.WalkContinue, nil
 		}
 
-		switch n := node.(type) {
-		case *ast.Heading:
-			headingBlocks, err := convertHeading(n, source, config, isFirstBlock)
-			if err != nil {
-				return ast.WalkStop, err
-			}
-			isFirstBlock = false
-			blocks = append(blocks, headingBlocks...)
-			return ast.WalkSkipChildren, nil
-
-		case *ast.Paragraph:
-			// Skip paragraphs that are children of list items or blockquotes
-			// They will be handled by their parent
-			if isChildOfListItem(node) || isChildOfBlockquote(node) {
-				return ast.WalkContinue, nil
-			}
-			paraBlocks, err := convertParagraph(n, source, config)
-			if err != nil {
-				return ast.WalkStop, err
-			}
-			isFirstBlock = false
-			blocks = append(blocks, paraBlocks...)
-			return ast.WalkSkipChildren, nil
-
-		case *ast.CodeBlock, *ast.FencedCodeBlock:
-			codeBlocks, err := convertCodeBlock(n, source, config, isFirstBlock)
-			if err != nil {
-				return ast.WalkStop, err
-			}
-			isFirstBlock = false
-			blocks = append(blocks, codeBlocks...)
-			return ast.WalkSkipChildren, nil
-
-		case *ast.Blockquote:
-			blockquoteBlocks, err := convertBlockquote(n, source, config, isFirstBlock)
-			if err != nil {
-				return ast.WalkStop, err
-			}
-			isFirstBlock = false
-			blocks = append(blocks, blockquoteBlocks...)
-			return ast.WalkSkipChildren, nil
-
-		case *ast.List:
-			listBlocks, err := convertList(n, source, config, 0, isFirstBlock)
-			if err != nil {
-				return ast.WalkStop, err
-			}
-			isFirstBlock = false
-			blocks = append(blocks, listBlocks...)
-			return ast.WalkSkipChildren, nil
-
-		case *ast.ThematicBreak:
-			block, err := convertThematicBreak(config)
-			if err != nil {
-				return ast.WalkStop, err
-			}
-			isFirstBlock = false
-			blocks = append(blocks, block)
-			return ast.WalkSkipChildren, nil
+		nodeBlocks, status, err := convertNode(node, source, config, 0, isFirstBlock, false)
+		if err != nil {
+			return status, err
 		}
 
-		return ast.WalkContinue, nil
+		if len(nodeBlocks) > 0 {
+			isFirstBlock = false
+			blocks = append(blocks, nodeBlocks...)
+		}
+
+		return status, nil
 	})
 
 	if err != nil {
@@ -165,6 +114,60 @@ func convertHeading(node *ast.Heading, source []byte, config *PreparedConfig, is
 	}
 
 	return blocks, nil
+}
+
+// convertNode handles conversion of a single AST node and its children (if WalkSkipChildren is returned)
+func convertNode(node ast.Node, source []byte, config *PreparedConfig, level int, isFirstBlock bool, force bool) ([]StyledBlock, ast.WalkStatus, error) {
+	switch n := node.(type) {
+	case *ast.Heading:
+		headingBlocks, err := convertHeading(n, source, config, isFirstBlock)
+		if err != nil {
+			return nil, ast.WalkStop, err
+		}
+		return headingBlocks, ast.WalkSkipChildren, nil
+
+	case *ast.Paragraph:
+		// Skip paragraphs that are children of list items or blockquotes
+		// They will be handled by their parent
+		if !force && (isChildOfListItem(node) || isChildOfBlockquote(node)) {
+			return nil, ast.WalkContinue, nil
+		}
+		paraBlocks, err := convertParagraph(n, source, config)
+		if err != nil {
+			return nil, ast.WalkStop, err
+		}
+		return paraBlocks, ast.WalkSkipChildren, nil
+
+	case *ast.CodeBlock, *ast.FencedCodeBlock:
+		codeBlocks, err := convertCodeBlock(n, source, config, isFirstBlock)
+		if err != nil {
+			return nil, ast.WalkStop, err
+		}
+		return codeBlocks, ast.WalkSkipChildren, nil
+
+	case *ast.Blockquote:
+		blockquoteBlocks, err := convertBlockquote(n, source, config, isFirstBlock)
+		if err != nil {
+			return nil, ast.WalkStop, err
+		}
+		return blockquoteBlocks, ast.WalkSkipChildren, nil
+
+	case *ast.List:
+		listBlocks, err := convertList(n, source, config, level, isFirstBlock)
+		if err != nil {
+			return nil, ast.WalkStop, err
+		}
+		return listBlocks, ast.WalkSkipChildren, nil
+
+	case *ast.ThematicBreak:
+		block, err := convertThematicBreak(config)
+		if err != nil {
+			return nil, ast.WalkStop, err
+		}
+		return []StyledBlock{block}, ast.WalkSkipChildren, nil
+	}
+
+	return nil, ast.WalkContinue, nil
 }
 
 // convertParagraph converts a paragraph node to a styled block
@@ -514,32 +517,16 @@ func convertBlockquote(node *ast.Blockquote, source []byte, config *PreparedConf
 			})
 		}
 
-		switch n := child.(type) {
-		case *ast.Heading:
-			childBlocks, err = convertHeading(n, source, config, isFirstChild)
-		case *ast.Paragraph:
-			childBlocks, err = convertParagraph(n, source, config)
-		case *ast.CodeBlock, *ast.FencedCodeBlock:
-			childBlocks, err = convertCodeBlock(n, source, config, isFirstChild)
-		case *ast.Blockquote:
-			// Nested blockquote
-			childBlocks, err = convertBlockquote(n, source, config, isFirstChild)
-		case *ast.List:
-			childBlocks, err = convertList(n, source, config, 0, isFirstChild)
-		case *ast.ThematicBreak:
-			block, convertErr := convertThematicBreak(config)
-			if convertErr != nil {
-				err = convertErr
-			} else {
-				childBlocks = []StyledBlock{block}
-			}
-		default:
-			// Skip unsupported node types
-			continue
-		}
-
+		var status ast.WalkStatus
+		childBlocks, status, err = convertNode(child, source, config, 0, isFirstChild, true)
 		if err != nil {
 			return nil, err
+		}
+		if status == ast.WalkStop {
+			break
+		}
+		if status == ast.WalkContinue && len(childBlocks) == 0 {
+			continue
 		}
 
 		isFirstChild = false
@@ -692,57 +679,94 @@ func convertListItem(node *ast.ListItem, source []byte, config *PreparedConfig, 
 	} else {
 		prefix = fmt.Sprintf("%s• ", indent)
 	}
-
-	// Extract text from child nodes
-	var text string
-	var inlineStyles []InlineStyle
-
-	// List items can contain paragraphs or text blocks directly
-	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
-		if para, ok := child.(*ast.Paragraph); ok {
-			var err error
-			text, inlineStyles, err = extractTextWithInlineStyles(para, source, config)
-			if err != nil {
-				return nil, err
-			}
-			break
-		} else if textBlock, ok := child.(*ast.TextBlock); ok {
-			var err error
-			text, inlineStyles, err = extractTextWithInlineStyles(textBlock, source, config)
-			if err != nil {
-				return nil, err
-			}
-			break
-		}
-	}
-
-	// Adjust inline style positions to account for prefix
-	// Use rune length because the prefix may contain multibyte UTF-8 characters (e.g., •)
 	prefixLen := len([]rune(prefix))
-	for i := range inlineStyles {
-		inlineStyles[i].Start += prefixLen
-		inlineStyles[i].End += prefixLen
-	}
 
-	blocks = append(blocks, StyledBlock{
-		Type:         BlockTypeListItem,
-		Text:         prefix + text + "\n",
-		Font:         safeString(style.Font),
-		Size:         safeInt(style.Size),
-		Color:        style.Color,
-		InlineStyles: inlineStyles,
-		Level:        level,
-	})
+	// We'll create a second-level indent for sub-blocks (children of the list item)
+	// Sub-blocks should be indented to align with the text after the bullet.
+	subIndent := strings.Repeat(" ", prefixLen)
 
-	// Handle nested lists (always pass isFirst=false for nested lists)
+	// List items can contain paragraphs, code blocks, or nested lists
+	isFirstChild := true
+	hasAddedMainBlock := false
 	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
-		if list, ok := child.(*ast.List); ok {
-			nestedBlocks, err := convertList(list, source, config, level+1, false)
+		var isTextNode bool
+		var textNode ast.Node
+		if para, ok := child.(*ast.Paragraph); ok {
+			isTextNode = true
+			textNode = para
+		} else if textBlock, ok := child.(*ast.TextBlock); ok {
+			isTextNode = true
+			textNode = textBlock
+		}
+
+		if isFirstChild && isTextNode {
+			text, inlineStyles, err := extractTextWithInlineStyles(textNode, source, config)
 			if err != nil {
 				return nil, err
 			}
-			blocks = append(blocks, nestedBlocks...)
+
+			// Adjust inline style positions to account for prefix
+			for i := range inlineStyles {
+				inlineStyles[i].Start += prefixLen
+				inlineStyles[i].End += prefixLen
+			}
+
+			blocks = append(blocks, StyledBlock{
+				Type:         BlockTypeListItem,
+				Text:         prefix + text + "\n",
+				Font:         safeString(style.Font),
+				Size:         safeInt(style.Size),
+				Color:        style.Color,
+				InlineStyles: inlineStyles,
+				Level:        level,
+			})
+			isFirstChild = false
+			hasAddedMainBlock = true
+			continue
 		}
+
+		// If we haven't added the main block yet (e.g., list item starts with a code block),
+		// add it now with just the prefix.
+		if !hasAddedMainBlock {
+			blocks = append(blocks, StyledBlock{
+				Type:  BlockTypeListItem,
+				Text:  prefix + "\n",
+				Font:  safeString(style.Font),
+				Size:  safeInt(style.Size),
+				Color: style.Color,
+				Level: level,
+			})
+			hasAddedMainBlock = true
+		}
+
+		// Otherwise, convert as a normal node and apply sub-indent
+		childLevel := level
+		if _, ok := child.(*ast.List); ok {
+			childLevel++
+		}
+		childBlocks, _, err := convertNode(child, source, config, childLevel, isFirstChild, true)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(childBlocks) > 0 {
+			// Apply indentation to sub-blocks
+			indentedBlocks := applyPrefixToBlocks(childBlocks, subIndent, nil)
+			blocks = append(blocks, indentedBlocks...)
+			isFirstChild = false
+		}
+	}
+
+	// If no blocks were created (empty list item), add an empty list item
+	if len(blocks) == 0 {
+		blocks = append(blocks, StyledBlock{
+			Type:  BlockTypeListItem,
+			Text:  prefix + "\n",
+			Font:  safeString(style.Font),
+			Size:  safeInt(style.Size),
+			Color: style.Color,
+			Level: level,
+		})
 	}
 
 	return blocks, nil
