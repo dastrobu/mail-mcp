@@ -34,6 +34,7 @@ func RegisterReplaceOutgoingMessage(srv *mcp.Server, richtextConfig *richtext.Pr
 		&mcp.Tool{
 			Name:        "replace_outgoing_message",
 			Description: "Replaces an OutgoingMessage (reply draft or new draft) by deleting it and creating a new one with updated properties. Supports Markdown formatting for content. This tool works with OutgoingMessage IDs returned by reply_to_message or create_outgoing_message. Note: Only works while the OutgoingMessage is still in memory (before Mail.app is closed). The old message is deleted and a new one is created, so the outgoing_id will change.",
+			InputSchema: GenerateSchema[ReplaceOutgoingMessageInput](),
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "Replace Outgoing Message",
 				ReadOnlyHint:    false,

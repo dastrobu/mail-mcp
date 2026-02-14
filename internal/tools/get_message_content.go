@@ -26,6 +26,7 @@ func RegisterGetMessageContent(srv *mcp.Server) {
 		&mcp.Tool{
 			Name:        "get_message_content",
 			Description: "Retrieves the full content (body) of a specific message by its ID from a specific account and mailbox. Supports nested mailboxes via mailboxPath array. IMPORTANT: Use the mailboxPath field from get_selected_messages output, not the mailbox field.",
+			InputSchema: GenerateSchema[GetMessageContentInput](),
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "Get Message Content",
 				ReadOnlyHint:    true,

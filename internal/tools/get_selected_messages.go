@@ -23,6 +23,7 @@ func RegisterGetSelectedMessages(srv *mcp.Server) {
 		&mcp.Tool{
 			Name:        "get_selected_messages",
 			Description: "Gets the currently selected message(s) in Mail.app.",
+			InputSchema: GenerateSchema[GetSelectedMessagesInput](),
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "Get Selected Messages",
 				ReadOnlyHint:    true,

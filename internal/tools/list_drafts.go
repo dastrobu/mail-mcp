@@ -24,6 +24,7 @@ func RegisterListDrafts(srv *mcp.Server) {
 		&mcp.Tool{
 			Name:        "list_drafts",
 			Description: "Lists draft messages from the Drafts mailbox for a specific account. Returns Message.id() values for persistent drafts saved in the Drafts mailbox. These are different from OutgoingMessage objects. Use list_outgoing_messages to see in-memory drafts instead.",
+			InputSchema: GenerateSchema[ListDraftsInput](),
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "List Draft Messages",
 				ReadOnlyHint:    true,

@@ -41,6 +41,7 @@ func RegisterCreateOutgoingMessage(srv *mcp.Server, richtextConfig *richtext.Pre
 		&mcp.Tool{
 			Name:        "create_outgoing_message",
 			Description: "Creates a new outgoing email message with optional Markdown formatting and returns its OutgoingMessage ID immediately (no delay). The message is saved but not sent. Use replace_outgoing_message to modify it. Returns OutgoingMessage.id() which works with replace_outgoing_message. Note: The OutgoingMessage only exists in memory while Mail.app is running. If you need persistent drafts that survive Mail.app restart, use reply_to_message instead.",
+			InputSchema: GenerateSchema[CreateOutgoingMessageInput](),
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "Create Outgoing Message",
 				ReadOnlyHint:    false,

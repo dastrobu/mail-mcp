@@ -17,6 +17,7 @@ func RegisterListOutgoingMessages(srv *mcp.Server) {
 		&mcp.Tool{
 			Name:        "list_outgoing_messages",
 			Description: "Lists all OutgoingMessage objects currently in memory in Mail.app. These are unsent messages that were created with create_outgoing_message or reply_to_message. Returns outgoing_id for each message which can be used with replace_outgoing_message. Note: Only shows messages in the current Mail.app session - messages are lost when Mail.app is closed or messages are sent.",
+			InputSchema: GenerateSchema[struct{}](),
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "List Outgoing Messages",
 				ReadOnlyHint:    true,

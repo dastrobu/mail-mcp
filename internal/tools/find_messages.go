@@ -32,6 +32,7 @@ func RegisterFindMessages(srv *mcp.Server) {
 		&mcp.Tool{
 			Name:        "find_messages",
 			Description: "Find messages in a mailbox. At least one filter criterion must be specified.",
+			InputSchema: GenerateSchema[FindMessagesInput](),
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "Find Messages",
 				ReadOnlyHint:    true,
