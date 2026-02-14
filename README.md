@@ -251,6 +251,23 @@ apple-mail-mcp
 
 ### MCP Client Configuration
 
+#### VS Code Configuration
+
+Make sure the server is running, see [HTTP Transport](#http-transport-recommended)
+
+Configure VS Code (`~/Library/Application Support/Code/User/mcp.json` on macOS):
+
+```json
+{
+  "servers": {
+    "apple-mail": {
+      "type": "http",
+      "url": "http://localhost:8787"
+    }
+  }
+}
+```
+
 #### Zed Configuration
 
 Make sure the server is running, see [HTTP Transport](#http-transport-recommended)
