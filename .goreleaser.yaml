@@ -130,17 +130,6 @@ brews:
         • Grant automation permissions to the binary (not Terminal)
         • Run on HTTP transport (localhost:8787 by default)
       
-      Configuration for Claude Desktop:
-        Add to ~/Library/Application Support/Claude/claude_desktop_config.json:
-        
-        {
-          "mcpServers": {
-            "apple-mail": {
-              "url": "http://localhost:8787/mcp/v1"
-            }
-          }
-        }
-      
       To remove the launchd service:
         apple-mail-mcp launchd remove
       
