@@ -16,7 +16,7 @@ var getMessageContentScript string
 // GetMessageContentInput defines input parameters for get_message_content tool
 type GetMessageContentInput struct {
 	Account     string   `json:"account" jsonschema:"Name of the email account"`
-	MailboxPath []string `json:"mailboxPath" jsonschema:"Path to the mailbox as an array (e.g. ['Inbox'] for top-level or ['Inbox','GitHub'] for nested mailbox). Use the mailboxPath field from get_selected_messages."`
+	MailboxPath []string `json:"mailboxPath" jsonschema:"Path to the mailbox as an array (e.g. ['Inbox'] for top-level or ['Inbox','GitHub'] for nested mailbox). Use the mailboxPath field from get_selected_messages. Note: Mailbox names are case-sensitive."`
 	MessageID   int      `json:"message_id" jsonschema:"The unique ID of the message to retrieve"`
 }
 

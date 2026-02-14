@@ -95,38 +95,43 @@ function run(argv) {
     // Navigate to the parent mailbox if mailboxPath is provided
     let parentMailbox = null;
     if (mailboxPath.length > 0) {
+      let currentContainer = targetAccount;
       try {
-        parentMailbox = targetAccount.mailboxes[mailboxPath[0]];
+        for (let i = 0; i < mailboxPath.length; i++) {
+          const part = mailboxPath[i];
+          try {
+            const nextMailbox = currentContainer.mailboxes[part];
+            nextMailbox.name(); // Verify existence
+            currentContainer = nextMailbox;
+          } catch (e) {
+            // If lookup fails, gather available mailboxes
+            let availableNames = [];
+            try {
+              const available = currentContainer.mailboxes();
+              for (let j = 0; j < available.length; j++) {
+                availableNames.push(available[j].name());
+              }
+            } catch (err) {
+              availableNames = ["(Error listing mailboxes)"];
+            }
 
-        // Chain through nested mailboxes
-        for (let i = 1; i < mailboxPath.length; i++) {
-          parentMailbox = parentMailbox.mailboxes[mailboxPath[i]];
+            return JSON.stringify({
+              success: false,
+              error:
+                'Mailbox "' +
+                part +
+                '" not found in "' +
+                (i === 0 ? accountName : mailboxPath[i - 1]) +
+                '". Available mailboxes: ' +
+                availableNames.join(", "),
+            });
+          }
         }
+        parentMailbox = currentContainer;
       } catch (e) {
         return JSON.stringify({
           success: false,
-          error:
-            'Mailbox path "' +
-            mailboxPath.join(" > ") +
-            '" not found in account "' +
-            accountName +
-            '". Error: ' +
-            e.toString(),
-        });
-      }
-
-      // Verify mailbox exists by trying to access a property
-      try {
-        parentMailbox.name();
-      } catch (e) {
-        return JSON.stringify({
-          success: false,
-          error:
-            'Mailbox path "' +
-            mailboxPath.join(" > ") +
-            '" not found in account "' +
-            accountName +
-            '". Please verify the mailbox path is correct.',
+          error: e.message,
         });
       }
     }

@@ -18,7 +18,7 @@ var replyToMessageScript string
 // ReplyToMessageInput defines input parameters for reply_to_message tool
 type ReplyToMessageInput struct {
 	Account       string   `json:"account" jsonschema:"Name of the email account"`
-	MailboxPath   []string `json:"mailboxPath" jsonschema:"Path to the mailbox as an array (e.g. ['Inbox'] for top-level or ['Inbox','GitHub'] for nested mailbox). Use the mailboxPath field from get_selected_messages."`
+	MailboxPath   []string `json:"mailboxPath" jsonschema:"Path to the mailbox as an array (e.g. ['Inbox'] for top-level or ['Inbox','GitHub'] for nested mailbox). Use the mailboxPath field from get_selected_messages. Note: Mailbox names are case-sensitive."`
 	MessageID     int      `json:"message_id" jsonschema:"The unique ID of the message to reply to"`
 	ReplyContent  string   `json:"reply_content" jsonschema:"Reply message content (supports Markdown formatting)"`
 	ContentFormat string   `json:"content_format,omitempty" jsonschema:"Content format: 'plain' or 'markdown'. Default is 'markdown'"`

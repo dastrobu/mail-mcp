@@ -98,22 +98,43 @@ function run(argv) {
     }
 
     // Navigate to target mailbox using path
+    let currentContainer = targetAccount;
     let targetMailbox;
+
     try {
-      targetMailbox = targetAccount.mailboxes[mailboxPath[0]];
-      for (let i = 1; i < mailboxPath.length; i++) {
-        targetMailbox = targetMailbox.mailboxes[mailboxPath[i]];
+      for (let i = 0; i < mailboxPath.length; i++) {
+        const part = mailboxPath[i];
+        try {
+          const nextMailbox = currentContainer.mailboxes[part];
+          nextMailbox.name(); // Verify existence
+          currentContainer = nextMailbox;
+        } catch (e) {
+          // If lookup fails, gather available mailboxes
+          let availableNames = [];
+          try {
+            const available = currentContainer.mailboxes();
+            for (let j = 0; j < available.length; j++) {
+              availableNames.push(available[j].name());
+            }
+          } catch (err) {
+            availableNames = ["(Error listing mailboxes)"];
+          }
+
+          throw new Error(
+            'Mailbox "' +
+              part +
+              '" not found in "' +
+              (i === 0 ? accountName : mailboxPath[i - 1]) +
+              '". Available mailboxes: ' +
+              availableNames.join(", "),
+          );
+        }
       }
-      targetMailbox.name(); // Verify mailbox exists
+      targetMailbox = currentContainer;
     } catch (e) {
       return JSON.stringify({
         success: false,
-        error:
-          'Mailbox "' +
-          mailboxPath.join(" > ") +
-          '" not found in account "' +
-          accountName +
-          '"',
+        error: e.message,
       });
     }
 

@@ -16,7 +16,7 @@ var listMailboxesScript string
 // ListMailboxesInput defines input parameters for list_mailboxes tool
 type ListMailboxesInput struct {
 	Account     string   `json:"account" jsonschema:"Name of the email account"`
-	MailboxPath []string `json:"mailboxPath,omitempty" jsonschema:"Optional path to a mailbox to list its sub-mailboxes (e.g. ['Inbox'] to list mailboxes under Inbox). If omitted, lists top-level mailboxes."`
+	MailboxPath []string `json:"mailboxPath,omitempty" jsonschema:"Optional path to a mailbox to list its sub-mailboxes (e.g. ['Inbox'] to list mailboxes under Inbox). If omitted, lists top-level mailboxes. Note: Mailbox names are case-sensitive."`
 }
 
 // RegisterListMailboxes registers the list_mailboxes tool with the MCP server

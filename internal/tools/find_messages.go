@@ -16,7 +16,7 @@ var findMessagesScript string
 // FindMessagesInput defines input parameters for find_messages tool
 type FindMessagesInput struct {
 	Account     string   `json:"account" jsonschema:"Name of the email account"`
-	MailboxPath []string `json:"mailboxPath" jsonschema:"Mailbox path array (e.g., ['Inbox'] or ['Inbox', 'GitHub'])"`
+	MailboxPath []string `json:"mailboxPath" jsonschema:"Mailbox path array (e.g., ['Inbox'] or ['Inbox', 'GitHub']). Note: Mailbox names are case-sensitive."`
 	Subject     string   `json:"subject,omitempty" jsonschema:"Filter by subject (substring match)"`
 	Sender      string   `json:"sender,omitempty" jsonschema:"Filter by sender email address (substring match)"`
 	ReadStatus  *bool    `json:"readStatus,omitempty" jsonschema:"Filter by read status (true for read, false for unread)"`
