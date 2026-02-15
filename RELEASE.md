@@ -176,7 +176,7 @@ For clear changelogs, consider using conventional commits (though all non-merge 
 
 Example:
 ```
-feat: add reply_to_message tool
+feat: add create_reply_draft tool
 fix: handle Mail.app not running gracefully
 perf: optimize message retrieval using whose() filter
 ```

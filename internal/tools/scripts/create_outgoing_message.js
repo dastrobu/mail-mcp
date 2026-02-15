@@ -20,293 +20,111 @@ function run(argv) {
   }
 
   // Parse arguments
-  const rawSubject = argv[0] || "";
-  const content = argv[1] || "";
-  const contentFormat = argv[2] || "plain";
-  const contentJson = argv[3] || "";
-  const toRecipientsJson = argv[4] || "";
-  const ccRecipientsJson = argv[5] || "";
-  const bccRecipientsJson = argv[6] || "";
-  const sender = argv[7] || "";
-  const openingWindow = argv[8] === "true";
-
-  // Trim and validate subject
-  const subject = rawSubject.trim();
-  if (!subject) {
-    return JSON.stringify({
-      success: false,
-      error: "Subject is required and cannot be empty or whitespace-only",
-    });
-  }
-
-  if (!content) {
-    return JSON.stringify({
-      success: false,
-      error: "Content is required",
-    });
-  }
+  const subject = argv[0] || "";
+  const content = argv[1] || ""; // Ignored, handled by Go via accessibility
+  const toRecipientsJson = argv[2] || "";
+  const ccRecipientsJson = argv[3] || "";
+  const bccRecipientsJson = argv[4] || "";
+  const fromAccount = argv[5] || ""; // Account to send from (optional)
 
   try {
-    // Parse recipient arrays from JSON
-    let toRecipients = [];
+    // Validate subject (optional but recommended)
+    if (!subject) {
+      log("Warning: No subject provided.");
+    }
+
+    // Prepare recipients
+    let toList = [];
     try {
-      toRecipients = JSON.parse(toRecipientsJson);
+      if (toRecipientsJson) toList = JSON.parse(toRecipientsJson);
     } catch (e) {
-      return JSON.stringify({
-        success: false,
-        error: "Invalid To recipients JSON: " + e.toString(),
-      });
+      log("Error parsing To recipients: " + e.toString());
     }
 
-    let ccRecipients = [];
-    if (ccRecipientsJson) {
+    let ccList = [];
+    try {
+      if (ccRecipientsJson) ccList = JSON.parse(ccRecipientsJson);
+    } catch (e) {
+      log("Error parsing CC recipients: " + e.toString());
+    }
+
+    let bccList = [];
+    try {
+      if (bccRecipientsJson) bccList = JSON.parse(bccRecipientsJson);
+    } catch (e) {
+      log("Error parsing BCC recipients: " + e.toString());
+    }
+
+    // Find the sender account if specified
+    let senderProperty = {};
+    if (fromAccount) {
       try {
-        ccRecipients = JSON.parse(ccRecipientsJson);
+        const accounts = Mail.accounts.whose({ name: fromAccount })();
+        if (accounts.length > 0) {
+          senderProperty = { sender: accounts[0].emailAddresses()[0] };
+        } else {
+          log(
+            `Warning: Account '${fromAccount}' not found. Using default account.`,
+          );
+        }
       } catch (e) {
-        return JSON.stringify({
-          success: false,
-          error: "Invalid CC recipients JSON: " + e.toString(),
-        });
+        log(
+          `Warning: Failed to find account '${fromAccount}': ${e.toString()}`,
+        );
       }
     }
 
-    let bccRecipients = [];
-    if (bccRecipientsJson) {
-      try {
-        bccRecipients = JSON.parse(bccRecipientsJson);
-      } catch (e) {
-        return JSON.stringify({
-          success: false,
-          error: "Invalid BCC recipients JSON: " + e.toString(),
-        });
-      }
-    }
-
-    // Create the outgoing message
-    const msgProps = {
+    // Create the message
+    // Note: We set visible: true to ensure the window opens for accessibility interaction
+    const msg = Mail.OutgoingMessage({
       subject: subject,
-      visible: openingWindow,
-    };
-
-    if (sender) {
-      msgProps.sender = sender;
-    }
-
-    const msg = Mail.make({
-      new: "outgoingMessage",
-      withProperties: msgProps,
+      visible: true,
+      ...senderProperty,
     });
 
-    // Add To recipients
-    for (let i = 0; i < toRecipients.length; i++) {
-      if (toRecipients[i]) {
-        try {
-          const recip = Mail.ToRecipient({ address: toRecipients[i] });
-          msg.toRecipients.push(recip);
-        } catch (e) {
-          log("Error adding To recipient: " + e.toString());
-        }
-      }
-    }
+    Mail.outgoingMessages.push(msg);
 
-    // Add CC recipients
-    for (let i = 0; i < ccRecipients.length; i++) {
-      if (ccRecipients[i]) {
-        try {
-          const recip = Mail.CcRecipient({ address: ccRecipients[i] });
-          msg.ccRecipients.push(recip);
-        } catch (e) {
-          log("Error adding CC recipient: " + e.toString());
-        }
-      }
-    }
-
-    // Add BCC recipients
-    for (let i = 0; i < bccRecipients.length; i++) {
-      if (bccRecipients[i]) {
-        try {
-          const recip = Mail.BccRecipient({ address: bccRecipients[i] });
-          msg.bccRecipients.push(recip);
-        } catch (e) {
-          log("Error adding BCC recipient: " + e.toString());
-        }
-      }
-    }
-
-    // Set content based on format
-    if (contentFormat === "markdown" && contentJson) {
-      // Render styled blocks as rich text
-      try {
-        const styledBlocks = JSON.parse(contentJson);
-        renderStyledBlocks(Mail, msg, styledBlocks, log);
-      } catch (e) {
-        return JSON.stringify({
-          success: false,
-          error: "Failed to render rich text: " + e.toString(),
-        });
-      }
-    } else {
-      // Plain text
-      Mail.make({
-        new: "paragraph",
-        withData: content,
-        at: msg.content,
+    // Add recipients
+    if (toList.length > 0) {
+      toList.forEach((addr) => {
+        msg.toRecipients.push(Mail.Recipient({ address: addr }));
       });
     }
 
-    // Save the message
+    if (ccList.length > 0) {
+      ccList.forEach((addr) => {
+        msg.ccRecipients.push(Mail.Recipient({ address: addr }));
+      });
+    }
+
+    if (bccList.length > 0) {
+      bccList.forEach((addr) => {
+        msg.bccRecipients.push(Mail.Recipient({ address: addr }));
+      });
+    }
+
+    // Save the message as a draft
     msg.save();
 
-    // Get the OutgoingMessage ID directly (no delay needed)
-    const outgoingId = msg.id();
-    const outgoingSubject = msg.subject();
-    const outgoingSender = msg.sender();
+    // Activate Mail.app to bring the window to front
+    Mail.activate();
 
-    // Read back recipients
-    const toAddrs = [];
-    try {
-      const recipients = msg.toRecipients();
-      for (let i = 0; i < recipients.length; i++) {
-        toAddrs.push(recipients[i].address());
-      }
-    } catch (e) {
-      log("Error reading To recipients: " + e.toString());
-    }
-
-    const ccAddrs = [];
-    try {
-      const recipients = msg.ccRecipients();
-      for (let i = 0; i < recipients.length; i++) {
-        ccAddrs.push(recipients[i].address());
-      }
-    } catch (e) {
-      log("Error reading CC recipients: " + e.toString());
-    }
-
-    const bccAddrs = [];
-    try {
-      const recipients = msg.bccRecipients();
-      for (let i = 0; i < recipients.length; i++) {
-        bccAddrs.push(recipients[i].address());
-      }
-    } catch (e) {
-      log("Error reading BCC recipients: " + e.toString());
-    }
-
-    // Check if all recipients were added successfully
-    let message = "Outgoing message created successfully";
-    let warning = null;
-    const requestedToCount = toRecipients.length;
-    const requestedCcCount = ccRecipients.length;
-    const requestedBccCount = bccRecipients.length;
-    const totalRequested =
-      requestedToCount + requestedCcCount + requestedBccCount;
-    const totalAdded = toAddrs.length + ccAddrs.length + bccAddrs.length;
-
-    if (totalRequested > 0 && totalAdded < totalRequested) {
-      if (totalAdded === 0) {
-        warning =
-          "No recipients could be added. Please add recipients manually in Mail.app before sending.";
-        message =
-          "Outgoing message created successfully, but recipients could not be added";
-      } else {
-        warning =
-          "Some recipients could not be added (" +
-          totalAdded +
-          " of " +
-          totalRequested +
-          " added). Please verify recipients in Mail.app.";
-        message =
-          "Outgoing message created successfully, but some recipients could not be added";
-      }
-    }
-
-    const result = {
-      outgoing_id: outgoingId,
-      subject: outgoingSubject,
-      sender: outgoingSender,
-      to_recipients: toAddrs,
-      cc_recipients: ccAddrs,
-      bcc_recipients: bccAddrs,
-      message: message,
-    };
-
-    if (warning) {
-      result.warning = warning;
-    }
-
+    // Return the draft ID so Go can track it
     return JSON.stringify({
       success: true,
-      data: result,
+      data: {
+        draft_id: msg.id(),
+        subject: msg.subject(),
+        message:
+          "Draft created successfully. Window opened for content pasting.",
+      },
       logs: logs.join("\n"),
     });
   } catch (e) {
-    // If Mail.app is running but we can't access it, it's a permissions issue
     return JSON.stringify({
       success: false,
-      error:
-        "Permission denied to access Mail.app. Please grant automation permissions in System Settings > Privacy & Security > Automation.",
-      errorCode: "MAIL_APP_NO_PERMISSIONS",
+      error: "Failed to create draft: " + e.toString(),
+      logs: logs.join("\n"),
     });
-  }
-}
-
-/**
- * Renders styled blocks as rich text in the message content
- * @param {Application} Mail - Mail application object
- * @param {Object} msg - Message object
- * @param {Array} styledBlocks - Array of styled block objects
- * @param {Function} log - Logging function
- */
-function renderStyledBlocks(Mail, msg, styledBlocks, log) {
-  for (let i = 0; i < styledBlocks.length; i++) {
-    const block = styledBlocks[i];
-
-    // Create paragraph with styling (all properties are optional)
-    // Go code adds newlines to block.text, so no need to append "\n" here
-    const props = {};
-    if (block.font) {
-      props.font = block.font;
-    }
-    if (block.size) {
-      props.size = block.size;
-    }
-    if (block.color) {
-      props.color = block.color;
-    }
-
-    Mail.make({
-      new: "paragraph",
-      withData: block.text,
-      withProperties: props,
-      at: msg.content,
-    });
-
-    // Apply inline styles if present
-    if (block.inline_styles && block.inline_styles.length > 0) {
-      const paraIndex = msg.content.paragraphs.length - 1;
-
-      for (let j = 0; j < block.inline_styles.length; j++) {
-        const style = block.inline_styles[j];
-
-        try {
-          // Apply character-level styling
-          for (let charIdx = style.start; charIdx < style.end; charIdx++) {
-            const char = msg.content.paragraphs[paraIndex].characters[charIdx];
-            if (style.font) {
-              char.font = style.font;
-            }
-            if (style.size) {
-              char.size = style.size;
-            }
-            if (style.color) {
-              char.color = style.color;
-            }
-          }
-        } catch (e) {
-          log("Error applying inline style: " + e.toString());
-        }
-      }
-    }
   }
 }

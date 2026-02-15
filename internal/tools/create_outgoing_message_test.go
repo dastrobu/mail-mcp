@@ -16,10 +16,11 @@ func TestHandleCreateOutgoingMessage_UnknownContentFormat(t *testing.T) {
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
+	invalidFormat := "invalid"
 	input := CreateOutgoingMessageInput{
 		Subject:       "Test",
 		Content:       "Test content",
-		ContentFormat: "invalid",
+		ContentFormat: &invalidFormat,
 		ToRecipients:  []string{"test@example.com"},
 	}
 
@@ -53,15 +54,16 @@ func TestHandleCreateOutgoingMessage_UnknownContentFormat(t *testing.T) {
 
 func TestHandleCreateOutgoingMessage_DefaultContentFormat(t *testing.T) {
 	// Test that empty content_format defaults to 'markdown'
+	emptyFormat := ""
 	input := CreateOutgoingMessageInput{
 		Subject:       "Test",
 		Content:       "Test content",
-		ContentFormat: "", // Empty should default to markdown
+		ContentFormat: &emptyFormat, // Empty should default to markdown
 		ToRecipients:  []string{"test@example.com"},
 	}
 
 	// Verify the default is applied correctly
-	contentFormat := strings.ToLower(strings.TrimSpace(input.ContentFormat))
+	contentFormat := strings.ToLower(strings.TrimSpace(*input.ContentFormat))
 	if contentFormat == "" {
 		contentFormat = ContentFormatDefault
 	}

@@ -14,7 +14,7 @@ var getSelectedMessagesScript string
 
 // GetSelectedMessagesInput defines input parameters for get_selected_messages tool
 type GetSelectedMessagesInput struct {
-	Limit int `json:"limit" jsonschema:"Maximum number of messages to return (1-100, default 5)"`
+	Limit int `json:"limit,omitempty" jsonschema:"Maximum number of messages to return (1-100, default 5)"`
 }
 
 // RegisterGetSelectedMessages registers the get_selected_messages tool with the MCP server

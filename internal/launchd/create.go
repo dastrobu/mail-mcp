@@ -25,31 +25,9 @@ func DefaultConfig() (*Config, error) {
 
 	// Try to find the binary using 'which' first (e.g., /opt/homebrew/bin/apple-mail-mcp)
 	// This ensures we use the symlinked version that will survive upgrades
-	var binaryPath string
-	cmd := exec.Command("which", "apple-mail-mcp")
-	output, err := cmd.Output()
-	if err == nil && len(output) > 0 {
-		// Found via 'which', use this path (trim whitespace)
-		whichPath := string(output[:len(output)-1]) // Remove trailing newline
-
-		// Verify that the version from 'which' matches current executable
-		if versionsMatch(whichPath, currentExe) {
-			binaryPath = whichPath
-		} else {
-			// Version mismatch - fall back to current executable
-			fmt.Fprintf(os.Stderr, "⚠️  Warning: 'which apple-mail-mcp' found %s but version doesn't match current executable\n", whichPath)
-			fmt.Fprintf(os.Stderr, "   Using current executable path instead: %s\n", currentExe)
-			binaryPath, err = filepath.EvalSymlinks(currentExe)
-			if err != nil {
-				return nil, fmt.Errorf("❌ failed to resolve binary path: %w", err)
-			}
-		}
-	} else {
-		// Fallback to current executable path
-		binaryPath, err = filepath.EvalSymlinks(currentExe)
-		if err != nil {
-			return nil, fmt.Errorf("❌ failed to resolve binary path: %w", err)
-		}
+	binaryPath, err := filepath.EvalSymlinks(currentExe)
+	if err != nil {
+		return nil, fmt.Errorf("❌ failed to resolve binary path: %w", err)
 	}
 
 	// Expand tilde in log paths

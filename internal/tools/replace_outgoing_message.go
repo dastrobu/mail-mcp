@@ -1,45 +1,45 @@
 package tools
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"strings"
+	"time"
 
 	"github.com/dastrobu/apple-mail-mcp/internal/jxa"
+	"github.com/dastrobu/apple-mail-mcp/internal/mac"
 	"github.com/dastrobu/apple-mail-mcp/internal/richtext"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/yuin/goldmark"
 )
 
 //go:embed scripts/replace_outgoing_message.js
 var replaceOutgoingMessageScript string
 
-// ReplaceOutgoingMessageInput defines input parameters for replace_outgoing_message tool
 type ReplaceOutgoingMessageInput struct {
-	OutgoingID    int      `json:"outgoing_id" jsonschema:"The ID of the OutgoingMessage to replace (from reply_to_message or create_outgoing_message)"`
-	Subject       string   `json:"subject,omitempty" jsonschema:"New subject line. Leave empty to keep existing subject"`
-	Content       string   `json:"content" jsonschema:"New body text (supports Markdown formatting: headings, bold, italic, code blocks, blockquotes, lists, links, horizontal rules. Tables and Mermaid diagrams are not supported). REQUIRED: Cannot preserve rich text from existing message"`
-	ContentFormat string   `json:"content_format,omitempty" jsonschema:"Content format: 'plain' or 'markdown'. Default is 'markdown'"`
-	ToRecipients  []string `json:"to_recipients,omitempty" jsonschema:"New list of To recipients. Leave empty to keep existing. Provide empty array to clear all"`
-	CcRecipients  []string `json:"cc_recipients,omitempty" jsonschema:"New list of CC recipients. Leave empty to keep existing. Provide empty array to clear all"`
-	BccRecipients []string `json:"bcc_recipients,omitempty" jsonschema:"New list of BCC recipients. Leave empty to keep existing. Provide empty array to clear all"`
-	Sender        string   `json:"sender,omitempty" jsonschema:"New sender email address. Leave empty to keep existing sender"`
-	OpeningWindow *bool    `json:"opening_window,omitempty" jsonschema:"Whether to show the compose window. Default is false"`
+	OutgoingID    int       `json:"outgoing_id" jsonschema:"The ID of the outgoing message to replace"`
+	Subject       *string   `json:"subject,omitempty" jsonschema:"New subject line (optional, keeps existing if null)"`
+	Content       string    `json:"content" jsonschema:"New email body content. Supports Markdown formatting."`
+	ContentFormat *string   `json:"content_format,omitempty" jsonschema:"Content format: 'plain' or 'markdown'. Default is 'markdown'."`
+	ToRecipients  *[]string `json:"to_recipients,omitempty" jsonschema:"New list of To recipients (optional, keeps existing if null, clears if empty array)"`
+	CcRecipients  *[]string `json:"cc_recipients,omitempty" jsonschema:"New list of CC recipients (optional, keeps existing if null, clears if empty array)"`
+	BccRecipients *[]string `json:"bcc_recipients,omitempty" jsonschema:"New list of BCC recipients (optional, keeps existing if null, clears if empty array)"`
+	Sender        *string   `json:"sender,omitempty" jsonschema:"New sender email address (optional, keeps existing if null)"`
 }
 
-// RegisterReplaceOutgoingMessage registers the replace_outgoing_message tool with the MCP server
 func RegisterReplaceOutgoingMessage(srv *mcp.Server, richtextConfig *richtext.PreparedConfig) {
 	mcp.AddTool(srv,
 		&mcp.Tool{
 			Name:        "replace_outgoing_message",
-			Description: "Replaces an OutgoingMessage (reply draft or new draft) by deleting it and creating a new one with updated properties. Supports Markdown formatting for content. This tool works with OutgoingMessage IDs returned by reply_to_message or create_outgoing_message. Note: Only works while the OutgoingMessage is still in memory (before Mail.app is closed). The old message is deleted and a new one is created, so the outgoing_id will change.",
+			Description: "Replaces an existing outgoing message (draft) with new content using the Accessibility API. This tool is for standalone drafts (not replies). It deletes the old draft and creates a fresh instance before pasting the new content at the top, preserving the default signature. Returns the new OutgoingMessage ID.",
 			InputSchema: GenerateSchema[ReplaceOutgoingMessageInput](),
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "Replace Outgoing Message",
 				ReadOnlyHint:    false,
 				IdempotentHint:  false,
-				DestructiveHint: new(false),
+				DestructiveHint: new(true),
 				OpenWorldHint:   new(true),
 			},
 		},
@@ -50,106 +50,112 @@ func RegisterReplaceOutgoingMessage(srv *mcp.Server, richtextConfig *richtext.Pr
 }
 
 func handleReplaceOutgoingMessage(ctx context.Context, request *mcp.CallToolRequest, input ReplaceOutgoingMessageInput, richtextConfig *richtext.PreparedConfig) (*mcp.CallToolResult, any, error) {
-	// Validate required content parameter
+	if input.OutgoingID == 0 {
+		return nil, nil, fmt.Errorf("outgoing_id is required")
+	}
+
 	if input.Content == "" {
-		return nil, nil, fmt.Errorf("content is required (cannot preserve rich text from existing message)")
+		return nil, nil, fmt.Errorf("content is required")
 	}
 
-	// Trim subject to avoid Mail.app search issues with whitespace
-	subject := input.Subject
-	if subject != "" {
-		subject = strings.TrimSpace(subject)
-		// Validate subject is not whitespace-only
-		if subject == "" {
-			return nil, nil, fmt.Errorf("subject cannot be whitespace-only")
+	contentFormat, err := ValidateAndNormalizeContentFormat(input.ContentFormat)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := mac.EnsureAccessibility(); err != nil {
+		return nil, nil, err
+	}
+
+	mailPID := mac.GetMailPID()
+	if mailPID == 0 {
+		return nil, nil, fmt.Errorf("Mail.app is not running. Please start Mail.app and try again")
+	}
+
+	var contentToPaste string
+	isHTML := false
+
+	if contentFormat == ContentFormatMarkdown {
+		var buf bytes.Buffer
+		if err := goldmark.Convert([]byte(input.Content), &buf); err != nil {
+			return nil, nil, fmt.Errorf("failed to convert markdown: %w", err)
 		}
+		contentToPaste = buf.String()
+		isHTML = true
+	} else {
+		contentToPaste = input.Content
+		isHTML = false
 	}
 
-	// Apply defaults for optional parameters
-	openingWindow := false
-	if input.OpeningWindow != nil {
-		openingWindow = *input.OpeningWindow
+	sentinel := "__KEEP__"
+
+	subject := sentinel
+	if input.Subject != nil {
+		subject = *input.Subject
 	}
 
-	// Determine content format (default to markdown)
-	contentFormat := strings.ToLower(strings.TrimSpace(input.ContentFormat))
-	if contentFormat == "" {
-		contentFormat = ContentFormatDefault
+	sender := sentinel
+	if input.Sender != nil {
+		sender = *input.Sender
 	}
 
-	// Process content based on format
-	var contentJSON string
-	switch contentFormat {
-	case ContentFormatMarkdown:
-		// Parse Markdown and convert to styled blocks
-		doc, err := richtext.ParseMarkdown([]byte(input.Content))
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse Markdown: %w", err)
-		}
-
-		styledBlocks, err := richtext.ConvertMarkdownToStyledBlocks(doc, []byte(input.Content), richtextConfig)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to convert Markdown to styled blocks: %w", err)
-		}
-
-		// Encode styled blocks as JSON
-		encoded, err := json.Marshal(styledBlocks)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to encode styled blocks: %w", err)
-		}
-		contentJSON = string(encoded)
-
-	case ContentFormatPlain:
-		// Plain text - just pass the content directly
-		contentJSON = ""
-
-	default:
-		return nil, nil, fmt.Errorf("invalid content_format: %s (must be '%s' or '%s')", contentFormat, ContentFormatPlain, ContentFormatMarkdown)
-	}
-
-	// Encode recipient arrays as JSON strings
-	// Empty string means "keep existing", non-empty JSON array means "replace"
-	toRecipientsJSON := ""
+	toRecipientsJSON := sentinel
 	if input.ToRecipients != nil {
-		encoded, err := json.Marshal(input.ToRecipients)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to encode To recipients: %w", err)
-		}
+		encoded, _ := json.Marshal(*input.ToRecipients)
 		toRecipientsJSON = string(encoded)
 	}
 
-	ccRecipientsJSON := ""
+	ccRecipientsJSON := sentinel
 	if input.CcRecipients != nil {
-		encoded, err := json.Marshal(input.CcRecipients)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to encode CC recipients: %w", err)
-		}
+		encoded, _ := json.Marshal(*input.CcRecipients)
 		ccRecipientsJSON = string(encoded)
 	}
 
-	bccRecipientsJSON := ""
+	bccRecipientsJSON := sentinel
 	if input.BccRecipients != nil {
-		encoded, err := json.Marshal(input.BccRecipients)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to encode BCC recipients: %w", err)
-		}
+		encoded, _ := json.Marshal(*input.BccRecipients)
 		bccRecipientsJSON = string(encoded)
 	}
 
-	data, err := jxa.Execute(ctx, replaceOutgoingMessageScript,
+	resultAny, err := jxa.Execute(ctx, replaceOutgoingMessageScript,
 		fmt.Sprintf("%d", input.OutgoingID),
 		subject,
-		input.Content,
-		contentFormat,
-		contentJSON,
+		"",
 		toRecipientsJSON,
 		ccRecipientsJSON,
 		bccRecipientsJSON,
-		input.Sender,
-		fmt.Sprintf("%t", openingWindow))
+		sender)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to execute replace_outgoing_message: %w", err)
+		return nil, nil, fmt.Errorf("failed to replace outgoing message: %w", err)
 	}
 
-	return nil, data, nil
+	resultMap, ok := resultAny.(map[string]any)
+	if !ok {
+		return nil, nil, fmt.Errorf("invalid JXA result format")
+	}
+
+	newOutgoingID, _ := resultMap["outgoing_id"].(float64)
+	resultSubject, _ := resultMap["subject"].(string)
+
+	if _, err := mac.WaitForWindowFocus(ctx, mailPID, resultSubject, 5*time.Second); err != nil {
+		return nil, nil, fmt.Errorf("failed to focus draft window: %w. Cannot paste content safely", err)
+	}
+
+	if err := mac.FocusBody(mailPID); err != nil {
+		return nil, nil, fmt.Errorf("failed to find or focus message body (make sure window is visible): %w", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	if err := mac.PasteContent(contentToPaste, isHTML); err != nil {
+		return nil, nil, fmt.Errorf("failed to paste content: %w", err)
+	}
+
+	finalResult := map[string]any{
+		"outgoing_id": newOutgoingID,
+		"subject":     resultSubject,
+		"message":     "Draft replaced and content pasted via Accessibility API.",
+	}
+
+	return nil, finalResult, nil
 }

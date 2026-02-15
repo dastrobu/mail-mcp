@@ -794,7 +794,7 @@ details.
 | Rich text | ✅ Full HTML via clipboard paste |
 | Threading | ✅ Via `reply()` |
 | Credentials | None required |
-| Permissions | ❌ Host process needs Accessibility access |
+| Permissions | ❌ apple-mail-mcp needs Accessibility access |
 | Reliability | ⚠️ Medium — depends on timing, frontmost app, cursor position |
 | Setup burden | ⚠️ Each MCP host app needs separate Accessibility grant |
 
@@ -838,10 +838,26 @@ mailto:user@example.com?subject=Re:%20Hello&body=My%20reply%20text
 | **JXA + styled paragraphs** | ⚠️ Limited | ✅ via `reply()` | None | Low | ✅ Production-ready |
 | **JXA + plain `>` quoting** | ❌ Plain only | ✅ via `reply()` | None | Low | ✅ Production-ready |
 | **IMAP APPEND** | ✅ Full HTML | ✅ Manual headers | ❌ Required | Low | ⚠️ Moderate effort |
-| **Clipboard paste** | ✅ Full HTML | ✅ via `reply()` | None | 🔴 High | ⚠️ Requires permissions |
+| **Accessibility-based reply** | ✅ Full HTML | ✅ via `reply()` | None | 🔴 High | ✅ Supported |
 | **MailKit Extension** | ❌ No body API | N/A | None | Low | ❌ Not possible |
 | **mailto: URL** | ❌ Plain only | ❌ No threading | None | Low | ❌ Wrong tool |
 | **AppleScript** | ❌ Same as JXA | ✅ | None | Low | ❌ No advantage |
+
+## Accessibility-based Reply Tools
+
+The `create_reply_draft` and `replace_reply_draft` tools implement the [Clipboard HTML paste strategy](#clipboard-html-paste-strategy).
+
+### How it works
+
+1. It calls `targetMessage.reply({openingWindow: true})`. This preserves the native HTML quote and threading.
+2. It waits for the window to appear and focus.
+3. It puts the reply content on the system clipboard (NSPasteboard).
+4. It uses the `CoreGraphics` API (`CGEvent`) to simulate a `Cmd+V` keystroke.
+
+### Requirements
+
+- **Accessibility Permissions:** The **apple-mail-mcp** binary must be granted Accessibility access in **System Settings -> Privacy & Security -> Accessibility**. Granting access to the binary directly is recommended for better security.
+- **Interactive:** A Mail.app window will briefly pop up and focus during the operation.
 
 ## ObjC Bridge from JXA
 
@@ -903,9 +919,9 @@ $.CGEventPost($.kCGHIDEventTap, keyDown);
 $.CGEventPost($.kCGHIDEventTap, keyUp);
 ```
 
-**Prerequisite:** The host process (Terminal, Claude Desktop, VS Code, etc.)
+**Prerequisite:** The **apple-mail-mcp** binary
 must be granted Accessibility access in **System Settings → Privacy & Security
-→ Accessibility**. This is a per-application, manual setup step.
+→ Accessibility**. Granting access to the binary directly is recommended for better security. This is a manual setup step.
 
 ### AXUIElement for UI inspection
 
@@ -1069,10 +1085,9 @@ setting) may be overwritten by the first write to `content`.
 - [Mail.sdef.md](../Mail.sdef.md) — Complete Mail.app scripting dictionary
 - [RICH_TEXT_HANDLING.md](RICH_TEXT_HANDLING.md) — RichText API details and
   common pitfalls
-- [reply_to_message.js](../internal/tools/scripts/reply_to_message.js) —
-  Working reply implementation
-- [test-reply.js](../scripts/test-reply.js) — Interactive test script for
-  save/close/reopen cycle
-- [test-richtext-styling.js](../scripts/test-richtext-styling.js) — Rich text styling exploration script
+- [create_reply_draft.js](../internal/tools/scripts/create_reply_draft.js) —
+  Implementation for creating replies via Accessibility API
+- [replace_reply_draft.js](../internal/tools/scripts/replace_reply_draft.js) —
+  Implementation for updating reply drafts via Accessibility API
 - [Apple JXA Release Notes](https://developer.apple.com/library/archive/releasenotes/InterapplicationCommunication/RN-JavaScriptForAutomation/)
 - [Mac Automation Scripting Guide](https://developer.apple.com/library/archive/documentation/LanguagesUtilities/Conceptual/MacAutomationScriptingGuide/)

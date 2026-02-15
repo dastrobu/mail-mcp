@@ -8,6 +8,11 @@ macOS requires explicit permission for applications to control other application
 
 **Key Insight:** The permission is granted to the **process that executes `osascript`**, not to the script itself. This means the parent process that launched the binary determines which application gets the permission.
 
+> **Note: Automation vs. Accessibility Permissions**
+> This document covers **Automation** permissions, which are required for most tools that interact with Mail.app.
+>
+> A few specific tools that perform rich text editing (`create_reply_draft`, `replace_reply_draft`, etc.) require a different, more sensitive permission: **Accessibility**. The workflow for granting Accessibility permissions is different. See the "Accessibility Permissions Workflow" section below for details.
+
 ## HTTP Transport (Recommended)
 
 ### How It Works
@@ -182,6 +187,29 @@ If the prompt doesn't appear or you need to modify permissions:
 4. Toggle the **Mail** checkbox to enable/disable
 5. Restart the server or parent application
 
+## Accessibility Permissions Workflow (for Rich Text Tools)
+
+Certain tools that modify email content in an open window (e.g., `create_reply_draft`, `replace_reply_draft`, `create_outgoing_message`) require a higher level of permission called **Accessibility**. This permission is more sensitive than Automation and has a specific workflow to enable it correctly, especially when running the server as a `launchd` service.
+
+If permission is not granted, you will receive an error message that directs you to the correct settings pane.
+
+### The Grant-and-Restart Cycle
+
+Due to how macOS caches permissions for running processes, you **must restart the server** after granting Accessibility permission for the first time.
+
+1.  **Trigger the Prompt:** The first time you run a tool that requires Accessibility, it will fail, but it will open the System Settings app for you.
+2.  **Grant Permission:** In `System Settings > Privacy & Security > Accessibility`, find `apple-mail-mcp` in the list and **enable the toggle switch**.
+3.  **Restart the Service:** This is the most important step. The running service is not aware of the permission change yet. You must restart it.
+
+    ```bash
+    # Restart the launchd service to apply the new permission
+    ./apple-mail-mcp launchd restart
+    # (Or 'brew services restart apple-mail-mcp' if installed via Homebrew)
+    ```
+4.  **Try Again:** Run the tool a second time. The new process will have the correct permissions, and the tool should now succeed.
+
+This "grant-and-restart" cycle only needs to be done once.
+
 ## Troubleshooting
 
 ### "osascript execution failed: signal: killed"
@@ -258,6 +286,9 @@ launchctl list | grep com.github.dastrobu.apple-mail-mcp
 
 # View logs
 tail -f /tmp/apple-mail-mcp.log
+
+# Restart the service (useful after granting Accessibility permissions)
+./apple-mail-mcp launchd restart
 
 # To remove the service later
 ./apple-mail-mcp launchd remove

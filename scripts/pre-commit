@@ -11,7 +11,7 @@ if [ -n "$README_STAGED" ]; then
 
     # Check if npx is available
     if command -v npx >/dev/null 2>&1; then
-        npx doctoc --maxlevel 3 README.md --github --title "## Table of Contents"
+        npx doctoc --maxlevel 3 README.md
 
         # Stage the updated README
         git add README.md

@@ -41,6 +41,9 @@ func main() {
 	opts.GlobalOpts.Launchd.Remove.Handler = func() error {
 		return removeLaunchd()
 	}
+	opts.GlobalOpts.Launchd.Restart.Handler = func() error {
+		return restartLaunchd()
+	}
 
 	// Parse command-line options
 	parser, err := opts.Parse()
@@ -231,4 +234,8 @@ func createLaunchd(options *opts.Options) error {
 // removeLaunchd removes the launchd service
 func removeLaunchd() error {
 	return launchd.Remove()
+}
+
+func restartLaunchd() error {
+	return launchd.Restart()
 }

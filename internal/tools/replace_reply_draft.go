@@ -1,0 +1,174 @@
+package tools
+
+import (
+	"bytes"
+	"context"
+	_ "embed"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/dastrobu/apple-mail-mcp/internal/jxa"
+	"github.com/dastrobu/apple-mail-mcp/internal/mac"
+	"github.com/dastrobu/apple-mail-mcp/internal/richtext"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/yuin/goldmark"
+)
+
+//go:embed scripts/replace_reply_draft.js
+var replaceReplyDraftScript string
+
+type ReplaceReplyDraftInput struct {
+	OutgoingID        int       `json:"outgoing_id" jsonschema:"The ID of the reply draft to replace"`
+	OriginalMessageID int       `json:"original_message_id" jsonschema:"The ID of the original message being replied to. This is used to re-create the reply with a clean quote."`
+	Account           string    `json:"account" jsonschema:"The account name of the original message"`
+	MailboxPath       []string  `json:"mailbox_path" jsonschema:"The mailbox path of the original message as an array"`
+	Subject           *string   `json:"subject,omitempty" jsonschema:"New subject line (optional, keeps existing if null)"`
+	Content           string    `json:"content" jsonschema:"New email body content. Supports Markdown formatting."`
+	ContentFormat     *string   `json:"content_format,omitempty" jsonschema:"Content format: 'plain' or 'markdown'. Default is 'markdown'."`
+	ToRecipients      *[]string `json:"to_recipients,omitempty" jsonschema:"New list of To recipients (optional, keeps existing if null, clears if empty array)"`
+	CcRecipients      *[]string `json:"cc_recipients,omitempty" jsonschema:"New list of CC recipients (optional, keeps existing if null, clears if empty array)"`
+	BccRecipients     *[]string `json:"bcc_recipients,omitempty" jsonschema:"New list of BCC recipients (optional, keeps existing if null, clears if empty array)"`
+	Sender            *string   `json:"sender,omitempty" jsonschema:"New sender email address (optional, keeps existing if null)"`
+}
+
+func RegisterReplaceReplyDraft(srv *mcp.Server, richtextConfig *richtext.PreparedConfig) {
+	mcp.AddTool(srv,
+		&mcp.Tool{
+			Name:        "replace_reply_draft",
+			Description: "Replaces an existing reply draft with new content while preserving the original message quote and signature. It achieves this by deleting the old draft and creating a fresh reply to the original message before pasting the new content. This tool should be used when you want to update a draft that was previously created as a reply. Requires Accessibility permissions.",
+			InputSchema: GenerateSchema[ReplaceReplyDraftInput](),
+			Annotations: &mcp.ToolAnnotations{
+				Title:           "Replace Reply Draft",
+				ReadOnlyHint:    false,
+				IdempotentHint:  false,
+				DestructiveHint: new(true),
+				OpenWorldHint:   new(true),
+			},
+		},
+		func(ctx context.Context, request *mcp.CallToolRequest, input ReplaceReplyDraftInput) (*mcp.CallToolResult, any, error) {
+			return handleReplaceReplyDraft(ctx, request, input, richtextConfig)
+		},
+	)
+}
+
+func handleReplaceReplyDraft(ctx context.Context, request *mcp.CallToolRequest, input ReplaceReplyDraftInput, richtextConfig *richtext.PreparedConfig) (*mcp.CallToolResult, any, error) {
+	if input.OutgoingID == 0 {
+		return nil, nil, fmt.Errorf("outgoing_id is required")
+	}
+	if input.OriginalMessageID == 0 {
+		return nil, nil, fmt.Errorf("original_message_id is required")
+	}
+	if len(input.MailboxPath) == 0 {
+		return nil, nil, fmt.Errorf("mailbox_path is required")
+	}
+
+	contentFormat, err := ValidateAndNormalizeContentFormat(input.ContentFormat)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := mac.EnsureAccessibility(); err != nil {
+		return nil, nil, err
+	}
+
+	mailPID := mac.GetMailPID()
+	if mailPID == 0 {
+		return nil, nil, fmt.Errorf("Mail.app is not running. Please start Mail.app and try again")
+	}
+
+	var contentToPaste string
+	isHTML := false
+
+	if contentFormat == ContentFormatMarkdown {
+		var buf bytes.Buffer
+		if err := goldmark.Convert([]byte(input.Content), &buf); err != nil {
+			return nil, nil, fmt.Errorf("failed to convert markdown: %w", err)
+		}
+		contentToPaste = buf.String()
+		isHTML = true
+	} else {
+		contentToPaste = input.Content
+		isHTML = false
+	}
+
+	sentinel := "__KEEP__"
+
+	subject := sentinel
+	if input.Subject != nil {
+		subject = *input.Subject
+	}
+
+	sender := sentinel
+	if input.Sender != nil {
+		sender = *input.Sender
+	}
+
+	toRecipientsJSON := sentinel
+	if input.ToRecipients != nil {
+		encoded, _ := json.Marshal(*input.ToRecipients)
+		toRecipientsJSON = string(encoded)
+	}
+
+	ccRecipientsJSON := sentinel
+	if input.CcRecipients != nil {
+		encoded, _ := json.Marshal(*input.CcRecipients)
+		ccRecipientsJSON = string(encoded)
+	}
+
+	bccRecipientsJSON := sentinel
+	if input.BccRecipients != nil {
+		encoded, _ := json.Marshal(*input.BccRecipients)
+		bccRecipientsJSON = string(encoded)
+	}
+
+	mailboxPathJSON, err := json.Marshal(input.MailboxPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to encode mailbox path: %w", err)
+	}
+
+	resultAny, err := jxa.Execute(ctx, replaceReplyDraftScript,
+		fmt.Sprintf("%d", input.OutgoingID),
+		subject,
+		"",
+		toRecipientsJSON,
+		ccRecipientsJSON,
+		bccRecipientsJSON,
+		sender,
+		fmt.Sprintf("%d", input.OriginalMessageID),
+		input.Account,
+		string(mailboxPathJSON))
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create fresh reply draft: %w", err)
+	}
+
+	resultMap, ok := resultAny.(map[string]any)
+	if !ok {
+		return nil, nil, fmt.Errorf("invalid JXA result format")
+	}
+	newOutgoingID, _ := resultMap["outgoing_id"].(float64)
+	subjectResult, _ := resultMap["subject"].(string)
+
+	if _, err := mac.WaitForWindowFocus(ctx, mailPID, subjectResult, 5*time.Second); err != nil {
+		return nil, nil, fmt.Errorf("failed to focus reply window: %w. Cannot paste content safely", err)
+	}
+
+	if err := mac.FocusBody(mailPID); err != nil {
+		return nil, nil, fmt.Errorf("failed to find or focus message body (make sure window is visible): %w", err)
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	if err := mac.PasteContent(contentToPaste, isHTML); err != nil {
+		return nil, nil, fmt.Errorf("failed to paste content: %w", err)
+	}
+
+	finalResult := map[string]any{
+		"outgoing_id":         newOutgoingID,
+		"subject":             subjectResult,
+		"original_message_id": input.OriginalMessageID,
+		"message":             "Reply draft replaced and content pasted via Accessibility API.",
+	}
+
+	return nil, finalResult, nil
+}

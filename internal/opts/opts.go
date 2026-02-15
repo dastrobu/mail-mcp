@@ -43,8 +43,9 @@ func (c *CompletionBashCmd) Execute(args []string) error {
 
 // LaunchdCmd holds launchd subcommands
 type LaunchdCmd struct {
-	Create LaunchdCreateCmd `command:"create" description:"Set up launchd service for automatic startup"`
-	Remove LaunchdRemoveCmd `command:"remove" description:"Remove launchd service"`
+	Create  LaunchdCreateCmd  `command:"create" description:"Set up launchd service for automatic startup"`
+	Remove  LaunchdRemoveCmd  `command:"remove" description:"Remove launchd service"`
+	Restart LaunchdRestartCmd `command:"restart" description:"Restart the launchd service"`
 }
 
 // LaunchdCreateCmd represents the 'launchd create' command
@@ -66,8 +67,21 @@ type LaunchdRemoveCmd struct {
 	Handler func() error
 }
 
+// LaunchdRestartCmd defines the 'restart' subcommand for launchd
+type LaunchdRestartCmd struct {
+	Handler func() error
+}
+
 // Execute runs the launchd remove command
 func (c *LaunchdRemoveCmd) Execute(args []string) error {
+	if c.Handler != nil {
+		return c.Handler()
+	}
+	return nil
+}
+
+// Execute runs the launchd restart command
+func (c *LaunchdRestartCmd) Execute(args []string) error {
 	if c.Handler != nil {
 		return c.Handler()
 	}

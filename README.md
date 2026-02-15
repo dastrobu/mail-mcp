@@ -4,10 +4,10 @@
 
 A Model Context Protocol (MCP) server providing programmatic access to macOS Mail.app using JavaScript for Automation (JXA).
 
+## Table of Contents
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
-## Table of Contents
 
 - [Overview](#overview)
 - [Security & Privacy](#security--privacy)
@@ -22,11 +22,10 @@ A Model Context Protocol (MCP) server providing programmatic access to macOS Mai
   - [HTTP Transport (Recommended)](#http-transport-recommended)
   - [STDIO Transport](#stdio-transport)
   - [MCP Client Configuration](#mcp-client-configuration)
-  - [macOS Automation Permissions](#macos-automation-permissions)
   - [Command-Line Options](#command-line-options)
-- [Automation Permissions](#automation-permissions)
-  - [HTTP Transport (Recommended)](#http-transport-recommended-1)
-  - [STDIO Transport](#stdio-transport-1)
+- [Permissions](#permissions)
+  - [Accessibility Permissions](#accessibility-permissions)
+  - [Automation Permissions](#automation-permissions)
   - [Manual Permission Configuration](#manual-permission-configuration)
   - [Resetting Permissions](#resetting-permissions)
 - [Troubleshooting](#troubleshooting)
@@ -40,8 +39,12 @@ A Model Context Protocol (MCP) server providing programmatic access to macOS Mai
   - [get_message_content](#get_message_content)
   - [get_selected_messages](#get_selected_messages)
   - [find_messages](#find_messages)
-  - [reply_to_message](#reply_to_message)
+  - [list_drafts](#list_drafts)
+  - [create_reply_draft](#create_reply_draft)
+  - [replace_reply_draft](#replace_reply_draft)
   - [create_outgoing_message](#create_outgoing_message)
+  - [list_outgoing_messages](#list_outgoing_messages)
+  - [replace_outgoing_message](#replace_outgoing_message)
 - [Custom Styling](#custom-styling)
 - [Upgrading](#upgrading)
   - [Homebrew](#homebrew)
@@ -72,7 +75,7 @@ This MCP server enables AI assistants and other MCP clients to interact with App
 - **Human-in-the-loop design**: No emails are sent automatically - all drafts require manual sending. This prevents agents from sending emails without human oversight.
 - No data transmitted outside of the MCP connection
 - Runs locally on your machine
-- Grant automation permissions to the MCP server alone, not to the terminal or any other application like Claude Code.
+- Grant automation and accessibility permissions to the MCP server alone, not to the terminal or any other application like Claude Code.
 - No credentials to a mail account ot SMTP server required, all interactions happen transparently with the Mail.app.
 
 ## Features
@@ -82,15 +85,16 @@ This MCP server enables AI assistants and other MCP clients to interact with App
 - **Get Message Content**: Fetch detailed content of individual messages
 - **Get Selected Messages**: Retrieve currently selected message(s) in Mail.app
 - **Find Messages**: Search messages with efficient filtering by subject, sender, read status, flags, and date ranges
-- **Reply to Message**: Create a reply to a message and save it as a draft
-- **Create Outgoing Message**: Create new email drafts with optional Markdown rendering to rich text.
-- **Rich Text Support**: Format emails with Markdown (headings, bold, italic, lists, code blocks, and more)
+- **Create Reply Draft**: Create a reply to a message with preserved quotes using the Accessibility API.
+- **Create Outgoing Message**: Create new email drafts with Markdown rendering to rich text.
+- **Replace Drafts**: Robustly update existing drafts (replies or standalone) while preserving quotes and signatures.
+- **Rich Text Support**: Native support for Markdown (headings, bold, italic, links, strikethrough, lists, code blocks, and more) using native Mail.app rendering via the Accessibility API.
 
 ## Requirements
 
 - macOS (Mail.app is macOS-only)
 - Mail.app configured with at least one email account (does not need to be running at server startup)
-- Automation permissions (see [Automation Permissions](#automation-permissions) below)
+- **Automation and Accessibility permissions** for Mail.app (see [Permissions](#permissions) below)
 
 ## Installation
 
@@ -174,7 +178,7 @@ The server supports two transport modes: **HTTP (recommended)** and STDIO.
 
 HTTP mode runs the server as a standalone daemon, allowing automation permissions to be granted directly to the `apple-mail-mcp` binary rather than the parent application.
 
-⚠️ To get permissions granted to the binary (not Terminal), you must launch it without Terminal as the parent process.
+⚠️ To get permissions granted to the binary (not Terminal or IDE), you must launch it without Terminal as the parent process.
 
 #### Option 1: Using launchd (Recommended for Production)
 
@@ -303,16 +307,6 @@ Configure Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_c
 }
 ```
 
-### macOS Automation Permissions
-
-macOS grants automation permissions to the **process that launches the binary**:
-
-- **Terminal/shell**: Terminal gets the permission (even with `--transport=http`)
-- **launchd service**: The binary itself gets the permission (recommended)
-- **Finder** (double-click): The binary itself gets the permission
-
-**Recommended setup:** Use launchd with HTTP transport to grant permissions directly to `apple-mail-mcp` rather than Terminal or other parent processes.
-
 ### Command-Line Options
 
 Use `-h` or `--help` with any command to see available options:
@@ -353,11 +347,32 @@ APPLE_MAIL_MCP_RICH_TEXT_STYLES=/path/to/custom_styles.yaml
 
 ➡️ See [MCP Client Configuration](#mcp-client-configuration) to connect your MCP client.
 
-## Automation Permissions
+## Permissions
+
+macOS requires both **Automation** and **Accessibility** permissions for full functionality.
+
+### Accessibility Permissions
+
+The draft creation and replacement tools (`create_reply_draft`, `replace_reply_draft`, `create_outgoing_message`, `replace_outgoing_message`) use the macOS Accessibility API to simulate pasting content.
+This is the only reliable way to support rich text (Markdown) while preserving original message quotes and signatures.
+If you only want to use tools that read emails, you can skip granting the accessibility permission.
+
+To ensure the highest level of security, grant accessibility permissions directly to the `apple-mail-mcp` binary alone:
+
+1. Open **System Settings** → **Privacy & Security** → **Accessibility**.
+2. Click the **+** (plus) button at the bottom of the list.
+3. In the file picker that appears, navigate to the path where `apple-mail-mcp` is installed.
+   - *Tip:* Press `Cmd + Shift + G` to enter the path manually (e.g. `/usr/local/bin/apple-mail-mcp`).
+4. Select the binary and click **Open**.
+5. Ensure the toggle switch next to `apple-mail-mcp` is **ON**.
+
+If permissions are missing, these tools will return an error explaining what to do.
+
+### Automation Permissions
 
 macOS requires automation permissions to control Mail.app. The permission behavior depends on which transport mode you use:
 
-### HTTP Transport (Recommended)
+#### HTTP Transport (Recommended)
 
 When using `--transport=http`, permissions can be granted to the `apple-mail-mcp` binary itself, **but only if launched without Terminal as the parent process**.
 
@@ -383,7 +398,7 @@ When using `--transport=http`, permissions can be granted to the `apple-mail-mcp
 
 **Advantage:** With launchd or Finder launch, permissions stay with the binary and work with all MCP clients. With Terminal launch, only Terminal gets permissions.
 
-### STDIO Transport
+#### STDIO Transport
 
 When using STDIO mode (default), permissions are granted to the **parent process** (Terminal, Claude Desktop, etc.) that launches the server:
 
@@ -413,7 +428,11 @@ tccutil reset AppleEvents
 
 # Reset for a specific application (e.g., Terminal)
 tccutil reset AppleEvents com.apple.Terminal
+
+# Reset for a specific application (e.g., Mail)
+tccutil reset Accessibility
 ```
+
 
 After resetting, the next time the server tries to control Mail.app, macOS will show the permission prompt again.
 
@@ -644,36 +663,56 @@ Find all messages with specific subject in nested mailbox:
 }
 ```
 
-### reply_to_message
+### list_drafts
 
-Creates a reply to a specific message and saves it as a draft in the Drafts mailbox. Mail.app automatically includes the quoted original message. The reply is NOT sent automatically.
+Lists persistent draft messages from the Drafts mailbox for a specific account.
 
 **Parameters:**
 
 - `account` (string, required): Name of the email account
-- `mailbox` (string, required): Name of the mailbox containing the message to reply to
+- `limit` (integer, optional): Maximum number of drafts to return (1-1000, default: 50)
+
+### create_reply_draft
+
+Creates a reply to a specific message using the Accessibility API. This approach preserves the original message quote and signature. It requires Accessibility permissions for the apple-mail-mcp binary. The message is NOT sent automatically.
+
+**Parameters:**
+
+- `account` (string, required): Name of the email account
+- `mailboxPath` (array of strings, required): Path to the mailbox as an array (e.g. `["Inbox"]`). Use the `mailboxPath` field from `get_selected_messages` or `find_messages`.
 - `message_id` (integer, required): The unique ID of the message to reply to
 - `reply_content` (string, required): The content/body of the reply message
-- `opening_window` (boolean, optional): Whether to show the window for the reply message. Default is false.
+- `content_format` (string, optional): Content format: "plain" or "markdown". Default is "markdown"
 - `reply_to_all` (boolean, optional): Whether to reply to all recipients. Default is false.
 
 **Output:**
 
-- Object containing:
-  - `draft_id`: ID of the created draft message
-  - `subject`: Subject line of the reply (prefixed with "Re: ")
-  - `to_recipients`: Array of recipient email addresses
-  - `drafts_mailbox`: Name of the Drafts mailbox where the reply was saved
-  - `message`: Confirmation message
+- `draft_id`: ID of the created draft message
+- `subject`: Subject line of the reply
+- `original_message_id`: ID of the message replied to
+- `message`: Confirmation message
 
-**Important Notes:**
+### replace_reply_draft
 
-- The returned `draft_id` is obtained after a 4-second sync delay
-- If creating multiple drafts rapidly, wait 4+ seconds between operations for proper sync
+Replaces an existing reply draft with new content while preserving the original message quote and signature. It achieves this by deleting the old draft and creating a fresh reply to the original message before pasting the new content. Requires Accessibility permissions.
+
+**Parameters:**
+
+- `outgoing_id` (integer, required): The ID of the reply draft to replace (from `list_outgoing_messages`)
+- `original_message_id` (integer, required): The ID of the original message being replied to
+- `account` (string, required): The account name of the original message
+- `mailbox_path` (array of strings, required): The mailbox path of the original message
+- `content` (string, required): New email body content (supports Markdown)
+- `content_format` (string, optional): Content format: "plain" or "markdown". Default is "markdown"
+- `subject` (string, optional): New subject line (optional)
+- `to_recipients` (array of strings, optional): New list of To recipients
+- `cc_recipients` (array of strings, optional): New list of CC recipients
+- `bcc_recipients` (array of strings, optional): New list of BCC recipients
+- `sender` (string, optional): New sender email address
 
 ### create_outgoing_message
 
-Creates a new outgoing email message with optional Markdown formatting. The message is saved but NOT sent automatically - you must send it manually in Mail.app.
+Creates a new outgoing email message using the Accessibility API to support rich text content. The message is saved but NOT sent automatically. Requires Accessibility permissions.
 
 **Parameters:**
 
@@ -684,7 +723,25 @@ Creates a new outgoing email message with optional Markdown formatting. The mess
 - `cc_recipients` (array of strings, optional): List of CC recipient email addresses
 - `bcc_recipients` (array of strings, optional): List of BCC recipient email addresses
 - `sender` (string, optional): Sender email address (uses default account if omitted)
-- `opening_window` (boolean, optional): Whether to show the compose window. Default is false
+
+### list_outgoing_messages
+
+Lists all `OutgoingMessage` objects currently in memory in Mail.app. These are unsent messages that were created with `create_outgoing_message` or `create_reply_draft`. Returns `outgoing_id` for each message which can be used with replacement tools.
+
+### replace_outgoing_message
+
+Replaces an existing outgoing message (draft) with new content using the Accessibility API. This tool is for standalone drafts (not replies). It deletes the old draft and creates a fresh instance before pasting the new content. Requires Accessibility permissions.
+
+**Parameters:**
+
+- `outgoing_id` (integer, required): The ID of the outgoing message to replace
+- `content` (string, required): New email body content (supports Markdown)
+- `content_format` (string, optional): Content format: "plain" or "markdown". Default is "markdown"
+- `subject` (string, optional): New subject line
+- `to_recipients` (array of strings, optional): New list of To recipients
+- `cc_recipients` (array of strings, optional): New list of CC recipients
+- `bcc_recipients` (array of strings, optional): New list of BCC recipients
+- `sender` (string, optional): New sender email address
 
 **Rich Text Formatting:**
 
@@ -696,13 +753,13 @@ When `content_format` is set to "markdown", the content is parsed as Markdown an
 - **Bold**: `**bold text**`
 - **Italic**: `*italic text*`
 - **Bold+Italic**: `***bold and italic text***`
-- **Strikethrough**: `~~strikethrough text~~`
+- **Strikethrough**: `~~strikethrough text~~` (natively supported)
 - **Inline Code**: `` `code` ``
 - **Code Blocks**: ` ```code block``` `
 - **Blockquotes**: `> quote`
 - **Lists**: Unordered (`-`, `*`) and ordered (`1.`, `2.`)
 - **Nested Lists**: Up to 4 levels deep
-- **Links**: `[text](url)` (rendered as "text (url)")
+- **Links**: `[text](url)` (rendered as native, clickable links)
 - **Horizontal Rules**: `---`
 - **Hard Line Breaks**: Two spaces at end of line creates line break within paragraph
 
@@ -845,7 +902,7 @@ See [docs/RICH_TEXT_DESIGN.md](docs/RICH_TEXT_DESIGN.md) for the complete stylin
 **Important Notes:**
 
 - The OutgoingMessage only exists in memory while Mail.app is running
-- For persistent drafts that survive Mail.app restart, use `reply_to_message` instead
+- For persistent drafts that survive Mail.app restart, use `create_reply_draft` or save the draft after creation
 - The message is NOT sent automatically - manual sending required
 - Default format is Markdown (rich text enabled by default)
 - Plain text content works as Markdown with no special characters (renders as single paragraph)
@@ -853,6 +910,8 @@ See [docs/RICH_TEXT_DESIGN.md](docs/RICH_TEXT_DESIGN.md) for the complete stylin
 - Rich text rendering errors fail immediately with clear error messages (no silent fallback to plain text)
 
 ## Upgrading
+
+**Note on Permissions & Service Restart:** After upgrading, macOS may prompt you to re-grant **Automation** and **Accessibility** permissions to the new binary. If features like "Get Selected Messages" or "Create Reply Draft" stop working, please re-enable these permissions in **System Settings > Privacy & Security**. You may also need to restart the service for the changes to take effect.
 
 ### Homebrew
 
@@ -1002,16 +1061,13 @@ The server provides detailed error messages including:
 
 ### Rich Text Limitations
 
-Due to JXA and Mail.app RichText API constraints:
+The move to the Accessibility-based pasting strategy has resolved many previous JXA-related constraints.
 
-- **Strikethrough**: Rendered as styled text (gray color) but not actual strikethrough formatting. Mail.app's RichText API doesn't support true strikethrough via JXA.
-- **Links**: Rendered as "text (url)" format, not clickable links. Creating clickable links programmatically via JXA is not straightforward with Mail.app's API.
-- **Background colors**: Not supported by Mail.app's RichText API (only foreground colors)
-- **Tables**: Not implemented (would require complex grid layout)
-- **Images**: Use Mail.app attachments instead
-- **Dark mode**: All colors use character-level styling for consistency. Mail.app automatically adapts character-level colors in dark mode.
+- **Tables**: Markdown tables are currently rendered as plain text. Native table support is planned.
+- **Images**: Inline images are not currently supported; please use the standard Mail.app attachment feature.
+- **Dark Mode**: Mail.app automatically adapts the colors of pasted HTML content to match your current system theme (Light or Dark).
 
-For strikethrough and links, the text is styled distinctively (different color/font) to indicate the formatting intent, but the actual strikethrough line or clickable link behavior is not available through JXA automation.
+Previously documented limitations regarding **Strikethrough** and **Links** are now resolved—they are rendered as native, functional Mail.app elements.
 
 ## License
 
