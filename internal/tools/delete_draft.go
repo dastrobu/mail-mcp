@@ -24,7 +24,6 @@ func RegisterDeleteDraft(srv *mcp.Server) {
 		&mcp.Tool{
 			Name:        "delete_draft",
 			Description: "Deletes a draft message by its ID. This action is irreversible.",
-			InputSchema: GenerateSchema[DeleteDraftInput](),
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "Delete Draft",
 				ReadOnlyHint:    false,

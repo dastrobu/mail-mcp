@@ -33,7 +33,6 @@ func RegisterReplaceOutgoingMessage(srv *mcp.Server) {
 		&mcp.Tool{
 			Name:        "replace_outgoing_message",
 			Description: "Replaces an outgoing message (draft or open window) with new content. Deletes the old message, creates a new one with updated properties, and pastes new content. NOTE: Mail.app may auto-save this message as a draft. If replacing this message again, check for and delete the old outgoing message first.",
-			InputSchema: GenerateSchema[ReplaceOutgoingMessageInput](),
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "Replace Outgoing Message",
 				ReadOnlyHint:    false,

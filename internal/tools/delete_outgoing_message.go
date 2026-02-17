@@ -24,7 +24,6 @@ func RegisterDeleteOutgoingMessage(srv *mcp.Server) {
 		&mcp.Tool{
 			Name:        "delete_outgoing_message",
 			Description: "Deletes an outgoing message (draft or open composition window) by its ID. This action is irreversible.",
-			InputSchema: GenerateSchema[DeleteOutgoingMessageInput](),
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "Delete Outgoing Message",
 				ReadOnlyHint:    false,

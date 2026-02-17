@@ -32,7 +32,6 @@ func RegisterCreateOutgoingMessage(srv *mcp.Server) {
 		&mcp.Tool{
 			Name:        "create_outgoing_message",
 			Description: "Creates a new outgoing message (open window), then pastes content into its body using the Accessibility API. Returns the new Outgoing Message ID. NOTE: Mail.app may auto-save this message as a draft. If replacing this message, check for and delete the old outgoing message first.",
-			InputSchema: GenerateSchema[CreateOutgoingMessageInput](),
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "Create Outgoing Message",
 				ReadOnlyHint:    false,
