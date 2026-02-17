@@ -23,7 +23,6 @@ func RegisterListAccounts(srv *mcp.Server) {
 		&mcp.Tool{
 			Name:        "list_accounts",
 			Description: "Lists all configured email accounts in Apple Mail with their properties.",
-			InputSchema: GenerateSchema[ListAccountsInput](),
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "List Mail Accounts",
 				ReadOnlyHint:    true,

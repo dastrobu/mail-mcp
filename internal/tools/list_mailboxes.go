@@ -25,7 +25,6 @@ func RegisterListMailboxes(srv *mcp.Server) {
 		&mcp.Tool{
 			Name:        "list_mailboxes",
 			Description: "Lists mailboxes (folders) for a specific account in Apple Mail. By default lists top-level mailboxes. Optionally provide mailboxPath to list sub-mailboxes of a specific mailbox. Returns mailboxPath for each mailbox to support nested mailbox navigation.",
-			InputSchema: GenerateSchema[ListMailboxesInput](),
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "List Mailboxes",
 				ReadOnlyHint:    true,
