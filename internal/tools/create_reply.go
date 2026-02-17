@@ -31,7 +31,6 @@ func RegisterCreateReply(srv *mcp.Server) {
 		&mcp.Tool{
 			Name:        "create_reply",
 			Description: "Creates a reply to a specific message, opens it as a new window, and pastes in content. Returns the new Outgoing Message ID. NOTE: Mail.app may auto-save this message as a draft. If replacing this reply, check for and delete the old outgoing message first.",
-			InputSchema: GenerateSchema[CreateReplyInput](),
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "Create Reply",
 				ReadOnlyHint:    false,
