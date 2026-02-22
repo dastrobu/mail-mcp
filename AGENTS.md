@@ -127,3 +127,4 @@ go test -v -count=1 ./...
 6.  [ ] Are you dereferencing AppleScript object specifiers with `()`?
 7.  [ ] Did you use `whose()` for finding messages rather than iterating arrays?
 8.  [ ] Are you using `log()` instead of `console.log()`?
+9.  [ ] Did you ignore any errors silently?
