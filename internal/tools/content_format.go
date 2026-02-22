@@ -47,18 +47,19 @@ func IsValidContentFormat(format string) bool {
 	}
 }
 
-// ToClipboardContent takes raw content and a format, and returns the content to paste and whether it is HTML.
-// It panics if an unknown content format is provided.
-func ToClipboardContent(content string, contentFormat string) (contentToPaste string, isHTML bool, err error) {
+// ToClipboardContent takes raw content and a format, and returns the HTML content (optional), the plain text content, and an error.
+// If the format is Markdown, the HTML is the rendered Markdown and the plain text is the original Markdown.
+// If the format is Plain, the HTML is nil and the plain text is the raw content.
+func ToClipboardContent(content string, contentFormat string) (htmlContent *string, plainContent string, err error) {
 	switch contentFormat {
 	case ContentFormatMarkdown:
-		contentToPaste, err = md.Render(content)
+		html, err := md.Render(content)
 		if err != nil {
-			return "", false, err
+			return nil, "", err
 		}
-		return contentToPaste, true, nil
+		return &html, content, nil
 	case ContentFormatPlain:
-		return content, false, nil
+		return nil, content, nil
 	default:
 		panic(fmt.Sprintf("unknown content format: %s", contentFormat))
 	}

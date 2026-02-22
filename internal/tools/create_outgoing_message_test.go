@@ -18,10 +18,11 @@ func TestHandleCreateOutgoingMessage_UnknownContentFormat(t *testing.T) {
 
 	invalidFormat := "invalid"
 	input := CreateOutgoingMessageInput{
+		Account:       "Test Account",
 		Subject:       "Test",
 		Content:       "Test content",
 		ContentFormat: &invalidFormat,
-		ToRecipients:  []string{"test@example.com"},
+		ToRecipients:  &[]string{"test@example.com"},
 	}
 
 	ctx := context.Background()
@@ -59,7 +60,7 @@ func TestHandleCreateOutgoingMessage_DefaultContentFormat(t *testing.T) {
 		Subject:       "Test",
 		Content:       "Test content",
 		ContentFormat: &emptyFormat, // Empty should default to markdown
-		ToRecipients:  []string{"test@example.com"},
+		ToRecipients:  &[]string{"test@example.com"},
 	}
 
 	// Verify the default is applied correctly

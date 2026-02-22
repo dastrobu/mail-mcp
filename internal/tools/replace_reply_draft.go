@@ -1,3 +1,5 @@
+// Package tools implements the MCP tools that form the core functionality of
+// the server, allowing programmatic interaction with the macOS Mail.app.
 package tools
 
 import (
@@ -72,10 +74,10 @@ func HandleReplaceReplyDraft(ctx context.Context, request *mcp.CallToolRequest, 
 
 	mailPID := mac.GetMailPID()
 	if mailPID == 0 {
-		return nil, nil, fmt.Errorf("Mail.app is not running. Please start Mail.app and try again")
+		return nil, nil, fmt.Errorf("mail.app is not running. Please start Mail.app and try again")
 	}
 
-	contentToPaste, isHTML, err := ToClipboardContent(input.Content, contentFormat)
+	htmlContent, plainContent, err := ToClipboardContent(input.Content, contentFormat)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -94,19 +96,28 @@ func HandleReplaceReplyDraft(ctx context.Context, request *mcp.CallToolRequest, 
 
 	toRecipientsJSON := sentinel
 	if input.ToRecipients != nil {
-		encoded, _ := json.Marshal(*input.ToRecipients)
+		encoded, err := json.Marshal(*input.ToRecipients)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to marshal to-recipients: %w", err)
+		}
 		toRecipientsJSON = string(encoded)
 	}
 
 	ccRecipientsJSON := sentinel
 	if input.CcRecipients != nil {
-		encoded, _ := json.Marshal(*input.CcRecipients)
+		encoded, err := json.Marshal(*input.CcRecipients)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to marshal cc-recipients: %w", err)
+		}
 		ccRecipientsJSON = string(encoded)
 	}
 
 	bccRecipientsJSON := sentinel
 	if input.BccRecipients != nil {
-		encoded, _ := json.Marshal(*input.BccRecipients)
+		encoded, err := json.Marshal(*input.BccRecipients)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to marshal bcc-recipients: %w", err)
+		}
 		bccRecipientsJSON = string(encoded)
 	}
 
@@ -138,17 +149,9 @@ func HandleReplaceReplyDraft(ctx context.Context, request *mcp.CallToolRequest, 
 	newOutgoingID, _ := resultMap["outgoing_id"].(float64)
 	subjectResult, _ := resultMap["subject"].(string)
 
-	if _, err := mac.WaitForWindowFocus(ctx, mailPID, subjectResult, 5*time.Second); err != nil {
-		return nil, nil, fmt.Errorf("failed to focus reply window: %w. Cannot paste content safely", err)
-	}
-
-	if err := mac.FocusBody(mailPID); err != nil {
-		return nil, nil, fmt.Errorf("failed to find or focus message body (make sure window is visible): %w", err)
-	}
-	time.Sleep(100 * time.Millisecond)
-
-	if err := mac.PasteContent(contentToPaste, isHTML); err != nil {
-		return nil, nil, fmt.Errorf("failed to paste content: %w", err)
+	// Atomically wait for the reply window, focus its body, and paste the content.
+	if err := mac.PasteIntoWindow(ctx, mailPID, subjectResult, 5*time.Second, htmlContent, plainContent); err != nil {
+		return nil, nil, fmt.Errorf("failed to paste content into reply window: %w", err)
 	}
 
 	finalResult := map[string]any{
