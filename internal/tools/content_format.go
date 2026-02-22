@@ -3,6 +3,8 @@ package tools
 import (
 	"fmt"
 	"strings"
+
+	"github.com/dastrobu/apple-mail-mcp/internal/md"
 )
 
 // ContentFormat constants for email content formatting
@@ -42,5 +44,22 @@ func IsValidContentFormat(format string) bool {
 		return true
 	default:
 		return false
+	}
+}
+
+// ToClipboardContent takes raw content and a format, and returns the content to paste and whether it is HTML.
+// It panics if an unknown content format is provided.
+func ToClipboardContent(content string, contentFormat string) (contentToPaste string, isHTML bool, err error) {
+	switch contentFormat {
+	case ContentFormatMarkdown:
+		contentToPaste, err = md.Render(content)
+		if err != nil {
+			return "", false, err
+		}
+		return contentToPaste, true, nil
+	case ContentFormatPlain:
+		return content, false, nil
+	default:
+		panic(fmt.Sprintf("unknown content format: %s", contentFormat))
 	}
 }

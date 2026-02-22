@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -12,7 +11,6 @@ import (
 	"github.com/dastrobu/apple-mail-mcp/internal/mac"
 	"github.com/dastrobu/apple-mail-mcp/internal/richtext"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/yuin/goldmark"
 )
 
 //go:embed scripts/create_reply_draft.js
@@ -81,19 +79,9 @@ func handleCreateReplyDraft(ctx context.Context, request *mcp.CallToolRequest, i
 		replyToAll = *input.ReplyToAll
 	}
 
-	var contentToPaste string
-	isHTML := false
-
-	if contentFormat == ContentFormatMarkdown {
-		var buf bytes.Buffer
-		if err := goldmark.Convert([]byte(input.ReplyContent), &buf); err != nil {
-			return nil, nil, fmt.Errorf("failed to convert markdown: %w", err)
-		}
-		contentToPaste = buf.String()
-		isHTML = true
-	} else {
-		contentToPaste = input.ReplyContent
-		isHTML = false
+	contentToPaste, isHTML, err := ToClipboardContent(input.ReplyContent, contentFormat)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// 4. JXA Execution
