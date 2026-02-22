@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -13,7 +12,6 @@ import (
 	"github.com/dastrobu/apple-mail-mcp/internal/mac"
 	"github.com/dastrobu/apple-mail-mcp/internal/richtext"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/yuin/goldmark"
 )
 
 //go:embed scripts/create_outgoing_message.js
@@ -73,19 +71,9 @@ func handleCreateOutgoingMessage(ctx context.Context, request *mcp.CallToolReque
 		return nil, nil, fmt.Errorf("Mail.app is not running. Please start Mail.app and try again")
 	}
 
-	var contentToPaste string
-	isHTML := false
-
-	if contentFormat == ContentFormatMarkdown {
-		var buf bytes.Buffer
-		if err := goldmark.Convert([]byte(input.Content), &buf); err != nil {
-			return nil, nil, fmt.Errorf("failed to convert markdown: %w", err)
-		}
-		contentToPaste = buf.String()
-		isHTML = true
-	} else {
-		contentToPaste = input.Content
-		isHTML = false
+	contentToPaste, isHTML, err := ToClipboardContent(input.Content, contentFormat)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	toRecipientsJSON, err := json.Marshal(input.ToRecipients)
