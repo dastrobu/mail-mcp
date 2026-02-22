@@ -25,7 +25,7 @@ func TestHandleCreateOutgoingMessage_UnknownContentFormat(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	_, _, err = handleCreateOutgoingMessage(ctx, &mcp.CallToolRequest{}, input, config)
+	_, _, err = HandleCreateOutgoingMessage(ctx, &mcp.CallToolRequest{}, input, config)
 
 	if err == nil {
 		t.Errorf("Expected error for unknown content format, but got nil")

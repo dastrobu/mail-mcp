@@ -14,7 +14,7 @@ var listAccountsScript string
 
 // ListAccountsInput defines input parameters for list_accounts tool
 type ListAccountsInput struct {
-	Enabled bool `json:"enabled"`
+	Enabled bool `json:"enabled" long:"enabled" description:"Filter by enabled status"`
 }
 
 // RegisterListAccounts registers the list_accounts tool with the MCP server
@@ -32,11 +32,11 @@ func RegisterListAccounts(srv *mcp.Server) {
 				OpenWorldHint:   new(true),
 			},
 		},
-		handleListAccounts,
+		HandleListAccounts,
 	)
 }
 
-func handleListAccounts(ctx context.Context, request *mcp.CallToolRequest, input ListAccountsInput) (*mcp.CallToolResult, any, error) {
+func HandleListAccounts(ctx context.Context, request *mcp.CallToolRequest, input ListAccountsInput) (*mcp.CallToolResult, any, error) {
 	// Execute JXA script with enabled filter
 	enabledStr := "false"
 	if input.Enabled {

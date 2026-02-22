@@ -15,9 +15,9 @@ var getMessageContentScript string
 
 // GetMessageContentInput defines input parameters for get_message_content tool
 type GetMessageContentInput struct {
-	Account     string   `json:"account" jsonschema:"Name of the email account"`
-	MailboxPath []string `json:"mailboxPath" jsonschema:"Path to the mailbox as an array (e.g. ['Inbox'] for top-level or ['Inbox','GitHub'] for nested mailbox). Use the mailboxPath field from get_selected_messages. Note: Mailbox names are case-sensitive."`
-	MessageID   int      `json:"message_id" jsonschema:"The unique ID of the message to retrieve"`
+	Account     string   `json:"account" jsonschema:"Name of the email account" long:"account" description:"Name of the email account"`
+	MailboxPath []string `json:"mailboxPath" jsonschema:"Path to the mailbox as an array (e.g. ['Inbox'] for top-level or ['Inbox','GitHub'] for nested mailbox). Use the mailboxPath field from get_selected_messages. Note: Mailbox names are case-sensitive." long:"mailbox-path" description:"Path to the mailbox. Can be specified multiple times for nested paths."`
+	MessageID   int      `json:"message_id" jsonschema:"The unique ID of the message to retrieve" long:"message-id" description:"The unique ID of the message to retrieve"`
 }
 
 // RegisterGetMessageContent registers the get_message_content tool with the MCP server
@@ -35,11 +35,11 @@ func RegisterGetMessageContent(srv *mcp.Server) {
 				OpenWorldHint:   new(true),
 			},
 		},
-		handleGetMessageContent,
+		HandleGetMessageContent,
 	)
 }
 
-func handleGetMessageContent(ctx context.Context, request *mcp.CallToolRequest, input GetMessageContentInput) (*mcp.CallToolResult, any, error) {
+func HandleGetMessageContent(ctx context.Context, request *mcp.CallToolRequest, input GetMessageContentInput) (*mcp.CallToolResult, any, error) {
 	// Validate mailboxPath
 	if len(input.MailboxPath) == 0 {
 		return nil, nil, fmt.Errorf("mailboxPath is required and must be a non-empty array")

@@ -18,13 +18,13 @@ import (
 var createOutgoingMessageScript string
 
 type CreateOutgoingMessageInput struct {
-	Subject       string    `json:"subject" jsonschema:"Subject line of the email"`
-	Content       string    `json:"content" jsonschema:"Email body content. Supports Markdown formatting."`
-	ContentFormat *string   `json:"content_format,omitempty" jsonschema:"Content format: 'plain' or 'markdown'. Default is 'markdown'."`
-	ToRecipients  []string  `json:"to_recipients" jsonschema:"List of To recipient email addresses"`
-	CcRecipients  *[]string `json:"cc_recipients,omitempty" jsonschema:"List of CC recipient email addresses (optional)"`
-	BccRecipients *[]string `json:"bcc_recipients,omitempty" jsonschema:"List of BCC recipient email addresses (optional)"`
-	Sender        *string   `json:"sender,omitempty" jsonschema:"Sender email address (optional, uses default account if omitted)"`
+	Subject       string    `json:"subject" jsonschema:"Subject line of the email" long:"subject" description:"Subject line of the email"`
+	Content       string    `json:"content" jsonschema:"Email body content. Supports Markdown formatting." long:"content" description:"Email body content. Supports Markdown formatting."`
+	ContentFormat *string   `json:"content_format,omitempty" jsonschema:"Content format: 'plain' or 'markdown'. Default is 'markdown'." long:"content-format" description:"Content format: 'plain' or 'markdown'. Default is 'markdown'."`
+	ToRecipients  []string  `json:"to_recipients" jsonschema:"List of To recipient email addresses" long:"to-recipients" description:"List of To recipient email addresses. Can be specified multiple times."`
+	CcRecipients  *[]string `json:"cc_recipients,omitempty" jsonschema:"List of CC recipient email addresses (optional)" long:"cc-recipients" description:"List of CC recipient email addresses (optional). Can be specified multiple times."`
+	BccRecipients *[]string `json:"bcc_recipients,omitempty" jsonschema:"List of BCC recipient email addresses (optional)" long:"bcc-recipients" description:"List of BCC recipient email addresses (optional). Can be specified multiple times."`
+	Sender        *string   `json:"sender,omitempty" jsonschema:"Sender email address (optional, uses default account if omitted)" long:"sender" description:"Sender email address (optional, uses default account if omitted)"`
 }
 
 func RegisterCreateOutgoingMessage(srv *mcp.Server, richtextConfig *richtext.PreparedConfig) {
@@ -42,12 +42,12 @@ func RegisterCreateOutgoingMessage(srv *mcp.Server, richtextConfig *richtext.Pre
 			},
 		},
 		func(ctx context.Context, request *mcp.CallToolRequest, input CreateOutgoingMessageInput) (*mcp.CallToolResult, any, error) {
-			return handleCreateOutgoingMessage(ctx, request, input, richtextConfig)
+			return HandleCreateOutgoingMessage(ctx, request, input, richtextConfig)
 		},
 	)
 }
 
-func handleCreateOutgoingMessage(ctx context.Context, request *mcp.CallToolRequest, input CreateOutgoingMessageInput, richtextConfig *richtext.PreparedConfig) (*mcp.CallToolResult, any, error) {
+func HandleCreateOutgoingMessage(ctx context.Context, request *mcp.CallToolRequest, input CreateOutgoingMessageInput, richtextConfig *richtext.PreparedConfig) (*mcp.CallToolResult, any, error) {
 	subject := strings.TrimSpace(input.Subject)
 	if subject == "" {
 		return nil, nil, fmt.Errorf("subject is required and cannot be empty or whitespace-only")

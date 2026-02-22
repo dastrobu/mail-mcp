@@ -1,11 +1,11 @@
 package opts
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/dastrobu/apple-mail-mcp/internal/launchd"
 	"github.com/dastrobu/apple-mail-mcp/internal/opts/typed_flags"
+	"github.com/dastrobu/apple-mail-mcp/internal/tools"
 	"github.com/jessevdk/go-flags"
 	"github.com/joho/godotenv"
 )
@@ -21,6 +21,7 @@ type Options struct {
 
 	Launchd    LaunchdCmd    `command:"launchd" description:"Manage launchd service"`
 	Completion CompletionCmd `command:"completion" description:"Generate completion scripts"`
+	Tool       ToolCmd       `command:"tool" description:"Execute a tool directly"`
 }
 
 // CompletionCmd holds completion subcommands
@@ -88,6 +89,174 @@ func (c *LaunchdRestartCmd) Execute(args []string) error {
 	return nil
 }
 
+// ToolCmd holds tool subcommands
+type ToolCmd struct {
+	ListAccounts           ListAccountsCmd           `command:"list_accounts" description:"Lists all configured email accounts"`
+	ListMailboxes          ListMailboxesCmd          `command:"list_mailboxes" description:"Lists mailboxes for a specific account"`
+	GetMessageContent      GetMessageContentCmd      `command:"get_message_content" description:"Retrieves the full content of a specific message"`
+	GetSelectedMessages    GetSelectedMessagesCmd    `command:"get_selected_messages" description:"Gets the currently selected message(s)"`
+	CreateReplyDraft       CreateReplyDraftCmd       `command:"create_reply_draft" description:"Creates a reply to a specific message"`
+	ReplaceReplyDraft      ReplaceReplyDraftCmd      `command:"replace_reply_draft" description:"Replaces an existing reply draft"`
+	ListDrafts             ListDraftsCmd             `command:"list_drafts" description:"Lists draft messages from the Drafts mailbox"`
+	CreateOutgoingMessage  CreateOutgoingMessageCmd  `command:"create_outgoing_message" description:"Creates a new outgoing email message"`
+	ListOutgoingMessages   ListOutgoingMessagesCmd   `command:"list_outgoing_messages" description:"Lists all OutgoingMessage objects currently in memory"`
+	ReplaceOutgoingMessage ReplaceOutgoingMessageCmd `command:"replace_outgoing_message" description:"Replaces an existing outgoing message"`
+	FindMessages           FindMessagesCmd           `command:"find_messages" description:"Find messages in a mailbox"`
+}
+
+// ListAccountsCmd represents the 'tool list_accounts' command
+type ListAccountsCmd struct {
+	tools.ListAccountsInput
+	Handler func(tools.ListAccountsInput) error
+}
+
+// Execute runs the list_accounts tool command
+func (c *ListAccountsCmd) Execute(args []string) error {
+	if c.Handler != nil {
+		return c.Handler(c.ListAccountsInput)
+	}
+	return nil
+}
+
+// ListMailboxesCmd represents the 'tool list_mailboxes' command
+type ListMailboxesCmd struct {
+	tools.ListMailboxesInput
+	Handler func(tools.ListMailboxesInput) error
+}
+
+// Execute runs the list_mailboxes tool command
+func (c *ListMailboxesCmd) Execute(args []string) error {
+	if c.Handler != nil {
+		return c.Handler(c.ListMailboxesInput)
+	}
+	return nil
+}
+
+// GetMessageContentCmd represents the 'tool get_message_content' command
+type GetMessageContentCmd struct {
+	tools.GetMessageContentInput
+	Handler func(tools.GetMessageContentInput) error
+}
+
+// Execute runs the get_message_content tool command
+func (c *GetMessageContentCmd) Execute(args []string) error {
+	if c.Handler != nil {
+		return c.Handler(c.GetMessageContentInput)
+	}
+	return nil
+}
+
+// GetSelectedMessagesCmd represents the 'tool get_selected_messages' command
+type GetSelectedMessagesCmd struct {
+	tools.GetSelectedMessagesInput
+	Handler func(tools.GetSelectedMessagesInput) error
+}
+
+// Execute runs the get_selected_messages tool command
+func (c *GetSelectedMessagesCmd) Execute(args []string) error {
+	if c.Handler != nil {
+		return c.Handler(c.GetSelectedMessagesInput)
+	}
+	return nil
+}
+
+// CreateReplyDraftCmd represents the 'tool create_reply_draft' command
+type CreateReplyDraftCmd struct {
+	tools.CreateReplyDraftInput
+	Handler func(tools.CreateReplyDraftInput) error
+}
+
+// Execute runs the create_reply_draft tool command
+func (c *CreateReplyDraftCmd) Execute(args []string) error {
+	if c.Handler != nil {
+		return c.Handler(c.CreateReplyDraftInput)
+	}
+	return nil
+}
+
+// ReplaceReplyDraftCmd represents the 'tool replace_reply_draft' command
+type ReplaceReplyDraftCmd struct {
+	tools.ReplaceReplyDraftInput
+	Handler func(tools.ReplaceReplyDraftInput) error
+}
+
+// Execute runs the replace_reply_draft tool command
+func (c *ReplaceReplyDraftCmd) Execute(args []string) error {
+	if c.Handler != nil {
+		return c.Handler(c.ReplaceReplyDraftInput)
+	}
+	return nil
+}
+
+// ListDraftsCmd represents the 'tool list_drafts' command
+type ListDraftsCmd struct {
+	tools.ListDraftsInput
+	Handler func(tools.ListDraftsInput) error
+}
+
+// Execute runs the list_drafts tool command
+func (c *ListDraftsCmd) Execute(args []string) error {
+	if c.Handler != nil {
+		return c.Handler(c.ListDraftsInput)
+	}
+	return nil
+}
+
+// CreateOutgoingMessageCmd represents the 'tool create_outgoing_message' command
+type CreateOutgoingMessageCmd struct {
+	tools.CreateOutgoingMessageInput
+	Handler func(tools.CreateOutgoingMessageInput) error
+}
+
+// Execute runs the create_outgoing_message tool command
+func (c *CreateOutgoingMessageCmd) Execute(args []string) error {
+	if c.Handler != nil {
+		return c.Handler(c.CreateOutgoingMessageInput)
+	}
+	return nil
+}
+
+// ListOutgoingMessagesCmd represents the 'tool list_outgoing_messages' command
+type ListOutgoingMessagesCmd struct {
+	Handler func() error
+}
+
+// Execute runs the list_outgoing_messages tool command
+func (c *ListOutgoingMessagesCmd) Execute(args []string) error {
+	if c.Handler != nil {
+		return c.Handler()
+	}
+	return nil
+}
+
+// ReplaceOutgoingMessageCmd represents the 'tool replace_outgoing_message' command
+type ReplaceOutgoingMessageCmd struct {
+	tools.ReplaceOutgoingMessageInput
+	Handler func(tools.ReplaceOutgoingMessageInput) error
+}
+
+// Execute runs the replace_outgoing_message tool command
+func (c *ReplaceOutgoingMessageCmd) Execute(args []string) error {
+	if c.Handler != nil {
+		return c.Handler(c.ReplaceOutgoingMessageInput)
+	}
+	return nil
+}
+
+// FindMessagesCmd represents the 'tool find_messages' command
+type FindMessagesCmd struct {
+	tools.FindMessagesInput
+	Handler func(tools.FindMessagesInput) error
+}
+
+// Execute runs the find_messages tool command
+func (c *FindMessagesCmd) Execute(args []string) error {
+	if c.Handler != nil {
+		return c.Handler(c.FindMessagesInput)
+	}
+	return nil
+}
+
 var GlobalOpts = Options{}
 
 // Parse parses command-line arguments and environment variables
@@ -119,10 +288,10 @@ func Parse() (*flags.Parser, error) {
 				// No command specified - that's OK, we'll run the server
 				return parser, nil
 			default:
-				return nil, fmt.Errorf("failed to parse options: %w", err)
+				return nil, err
 			}
 		}
-		return nil, fmt.Errorf("failed to parse options: %w", err)
+		return nil, err
 	}
 
 	return parser, nil

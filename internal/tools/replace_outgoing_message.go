@@ -17,14 +17,14 @@ import (
 var replaceOutgoingMessageScript string
 
 type ReplaceOutgoingMessageInput struct {
-	OutgoingID    int       `json:"outgoing_id" jsonschema:"The ID of the outgoing message to replace"`
-	Subject       *string   `json:"subject,omitempty" jsonschema:"New subject line (optional, keeps existing if null)"`
-	Content       string    `json:"content" jsonschema:"New email body content. Supports Markdown formatting."`
-	ContentFormat *string   `json:"content_format,omitempty" jsonschema:"Content format: 'plain' or 'markdown'. Default is 'markdown'."`
-	ToRecipients  *[]string `json:"to_recipients,omitempty" jsonschema:"New list of To recipients (optional, keeps existing if null, clears if empty array)"`
-	CcRecipients  *[]string `json:"cc_recipients,omitempty" jsonschema:"New list of CC recipients (optional, keeps existing if null, clears if empty array)"`
-	BccRecipients *[]string `json:"bcc_recipients,omitempty" jsonschema:"New list of BCC recipients (optional, keeps existing if null, clears if empty array)"`
-	Sender        *string   `json:"sender,omitempty" jsonschema:"New sender email address (optional, keeps existing if null)"`
+	OutgoingID    int       `json:"outgoing_id" jsonschema:"The ID of the outgoing message to replace" long:"outgoing-id" description:"The ID of the outgoing message to replace"`
+	Subject       *string   `json:"subject,omitempty" jsonschema:"New subject line (optional, keeps existing if null)" long:"subject" description:"New subject line (optional, keeps existing if null)"`
+	Content       string    `json:"content" jsonschema:"New email body content. Supports Markdown formatting." long:"content" description:"New email body content. Supports Markdown formatting."`
+	ContentFormat *string   `json:"content_format,omitempty" jsonschema:"Content format: 'plain' or 'markdown'. Default is 'markdown'." long:"content-format" description:"Content format: 'plain' or 'markdown'. Default is 'markdown'."`
+	ToRecipients  *[]string `json:"to_recipients,omitempty" jsonschema:"New list of To recipients (optional, keeps existing if null, clears if empty array)" long:"to-recipients" description:"New list of To recipients (optional, keeps existing if null, clears if empty array). Can be specified multiple times."`
+	CcRecipients  *[]string `json:"cc_recipients,omitempty" jsonschema:"New list of CC recipients (optional, keeps existing if null, clears if empty array)" long:"cc-recipients" description:"New list of CC recipients (optional, keeps existing if null, clears if empty array). Can be specified multiple times."`
+	BccRecipients *[]string `json:"bcc_recipients,omitempty" jsonschema:"New list of BCC recipients (optional, keeps existing if null, clears if empty array)" long:"bcc-recipients" description:"New list of BCC recipients (optional, keeps existing if null, clears if empty array). Can be specified multiple times."`
+	Sender        *string   `json:"sender,omitempty" jsonschema:"New sender email address (optional, keeps existing if null)" long:"sender" description:"New sender email address (optional, keeps existing if null)"`
 }
 
 func RegisterReplaceOutgoingMessage(srv *mcp.Server, richtextConfig *richtext.PreparedConfig) {
@@ -42,12 +42,12 @@ func RegisterReplaceOutgoingMessage(srv *mcp.Server, richtextConfig *richtext.Pr
 			},
 		},
 		func(ctx context.Context, request *mcp.CallToolRequest, input ReplaceOutgoingMessageInput) (*mcp.CallToolResult, any, error) {
-			return handleReplaceOutgoingMessage(ctx, request, input, richtextConfig)
+			return HandleReplaceOutgoingMessage(ctx, request, input, richtextConfig)
 		},
 	)
 }
 
-func handleReplaceOutgoingMessage(ctx context.Context, request *mcp.CallToolRequest, input ReplaceOutgoingMessageInput, richtextConfig *richtext.PreparedConfig) (*mcp.CallToolResult, any, error) {
+func HandleReplaceOutgoingMessage(ctx context.Context, request *mcp.CallToolRequest, input ReplaceOutgoingMessageInput, richtextConfig *richtext.PreparedConfig) (*mcp.CallToolResult, any, error) {
 	if input.OutgoingID == 0 {
 		return nil, nil, fmt.Errorf("outgoing_id is required")
 	}

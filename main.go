@@ -45,10 +45,12 @@ func main() {
 		return restartLaunchd()
 	}
 
+	registerToolHandlers()
+
 	// Parse command-line options
 	parser, err := opts.Parse()
 	if err != nil {
-		log.Fatalf("Failed to parse options: %v", err)
+		log.Fatalf("%v", err)
 	}
 
 	// Handle version flag
@@ -238,4 +240,83 @@ func removeLaunchd() error {
 
 func restartLaunchd() error {
 	return launchd.Restart()
+}
+
+func registerToolHandlers() {
+	// Helper to handle tool execution result
+	handleResult := func(result any, err error) error {
+		if err != nil {
+			return err
+		}
+		encoder := json.NewEncoder(os.Stdout)
+		encoder.SetIndent("", "  ")
+		return encoder.Encode(result)
+	}
+
+	// Helper to load richtext config
+	getRichtextConfig := func() *richtext.PreparedConfig {
+		// Use GlobalOpts.RichTextStyles
+		cfg, err := richtext.LoadConfig(opts.GlobalOpts.RichTextStyles)
+		if err != nil {
+			// If loading fails, log warning and use default (empty path results in default)
+			log.Printf("Warning: Failed to load rich text styles: %v. Using defaults.", err)
+			cfg, _ = richtext.LoadConfig("")
+		}
+		return cfg
+	}
+
+	opts.GlobalOpts.Tool.ListAccounts.Handler = func(input tools.ListAccountsInput) error {
+		_, data, err := tools.HandleListAccounts(context.Background(), nil, input)
+		return handleResult(data, err)
+	}
+
+	opts.GlobalOpts.Tool.ListMailboxes.Handler = func(input tools.ListMailboxesInput) error {
+		_, data, err := tools.HandleListMailboxes(context.Background(), nil, input)
+		return handleResult(data, err)
+	}
+
+	opts.GlobalOpts.Tool.GetMessageContent.Handler = func(input tools.GetMessageContentInput) error {
+		_, data, err := tools.HandleGetMessageContent(context.Background(), nil, input)
+		return handleResult(data, err)
+	}
+
+	opts.GlobalOpts.Tool.GetSelectedMessages.Handler = func(input tools.GetSelectedMessagesInput) error {
+		_, data, err := tools.HandleGetSelectedMessages(context.Background(), nil, input)
+		return handleResult(data, err)
+	}
+
+	opts.GlobalOpts.Tool.CreateReplyDraft.Handler = func(input tools.CreateReplyDraftInput) error {
+		_, data, err := tools.HandleCreateReplyDraft(context.Background(), nil, input, getRichtextConfig())
+		return handleResult(data, err)
+	}
+
+	opts.GlobalOpts.Tool.ReplaceReplyDraft.Handler = func(input tools.ReplaceReplyDraftInput) error {
+		_, data, err := tools.HandleReplaceReplyDraft(context.Background(), nil, input, getRichtextConfig())
+		return handleResult(data, err)
+	}
+
+	opts.GlobalOpts.Tool.ListDrafts.Handler = func(input tools.ListDraftsInput) error {
+		_, data, err := tools.HandleListDrafts(context.Background(), nil, input)
+		return handleResult(data, err)
+	}
+
+	opts.GlobalOpts.Tool.CreateOutgoingMessage.Handler = func(input tools.CreateOutgoingMessageInput) error {
+		_, data, err := tools.HandleCreateOutgoingMessage(context.Background(), nil, input, getRichtextConfig())
+		return handleResult(data, err)
+	}
+
+	opts.GlobalOpts.Tool.ListOutgoingMessages.Handler = func() error {
+		_, data, err := tools.HandleListOutgoingMessages(context.Background(), nil, struct{}{})
+		return handleResult(data, err)
+	}
+
+	opts.GlobalOpts.Tool.ReplaceOutgoingMessage.Handler = func(input tools.ReplaceOutgoingMessageInput) error {
+		_, data, err := tools.HandleReplaceOutgoingMessage(context.Background(), nil, input, getRichtextConfig())
+		return handleResult(data, err)
+	}
+
+	opts.GlobalOpts.Tool.FindMessages.Handler = func(input tools.FindMessagesInput) error {
+		_, data, err := tools.HandleFindMessages(context.Background(), nil, input)
+		return handleResult(data, err)
+	}
 }

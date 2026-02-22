@@ -14,8 +14,8 @@ var listDraftsScript string
 
 // ListDraftsInput defines input parameters for list_drafts tool
 type ListDraftsInput struct {
-	Account string `json:"account" jsonschema:"Name of the email account"`
-	Limit   int    `json:"limit,omitempty" jsonschema:"Maximum number of drafts to return (1-1000, default: 50)"`
+	Account string `json:"account" jsonschema:"Name of the email account" long:"account" description:"Name of the email account"`
+	Limit   int    `json:"limit,omitempty" jsonschema:"Maximum number of drafts to return (1-1000, default: 50)" long:"limit" description:"Maximum number of drafts to return (1-1000, default: 50)"`
 }
 
 // RegisterListDrafts registers the list_drafts tool with the MCP server
@@ -33,11 +33,11 @@ func RegisterListDrafts(srv *mcp.Server) {
 				OpenWorldHint:   new(true),
 			},
 		},
-		handleListDrafts,
+		HandleListDrafts,
 	)
 }
 
-func handleListDrafts(ctx context.Context, request *mcp.CallToolRequest, input ListDraftsInput) (*mcp.CallToolResult, any, error) {
+func HandleListDrafts(ctx context.Context, request *mcp.CallToolRequest, input ListDraftsInput) (*mcp.CallToolResult, any, error) {
 	// Apply default limit
 	limit := input.Limit
 	if limit == 0 {

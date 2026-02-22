@@ -14,7 +14,7 @@ var getSelectedMessagesScript string
 
 // GetSelectedMessagesInput defines input parameters for get_selected_messages tool
 type GetSelectedMessagesInput struct {
-	Limit int `json:"limit,omitempty" jsonschema:"Maximum number of messages to return (1-100, default 5)"`
+	Limit int `json:"limit,omitempty" jsonschema:"Maximum number of messages to return (1-100, default 5)" long:"limit" description:"Maximum number of messages to return (1-100, default 5)"`
 }
 
 // RegisterGetSelectedMessages registers the get_selected_messages tool with the MCP server
@@ -32,11 +32,11 @@ func RegisterGetSelectedMessages(srv *mcp.Server) {
 				OpenWorldHint:   new(true),
 			},
 		},
-		handleGetSelectedMessages,
+		HandleGetSelectedMessages,
 	)
 }
 
-func handleGetSelectedMessages(ctx context.Context, request *mcp.CallToolRequest, input GetSelectedMessagesInput) (*mcp.CallToolResult, any, error) {
+func HandleGetSelectedMessages(ctx context.Context, request *mcp.CallToolRequest, input GetSelectedMessagesInput) (*mcp.CallToolResult, any, error) {
 	// Apply default for limit if not specified
 	limit := input.Limit
 	if limit == 0 {

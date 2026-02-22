@@ -26,11 +26,11 @@ func RegisterListOutgoingMessages(srv *mcp.Server) {
 				OpenWorldHint:   new(true),
 			},
 		},
-		handleListOutgoingMessages,
+		HandleListOutgoingMessages,
 	)
 }
 
-func handleListOutgoingMessages(ctx context.Context, request *mcp.CallToolRequest, input struct{}) (*mcp.CallToolResult, any, error) {
+func HandleListOutgoingMessages(ctx context.Context, request *mcp.CallToolRequest, input struct{}) (*mcp.CallToolResult, any, error) {
 	data, err := jxa.Execute(ctx, listOutgoingMessagesScript)
 	if err != nil {
 		return nil, nil, err
