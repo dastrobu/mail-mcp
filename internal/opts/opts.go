@@ -1,9 +1,9 @@
 package opts
 
 import (
+	"fmt"
 	"os"
 
-	"github.com/dastrobu/apple-mail-mcp/internal/launchd"
 	"github.com/dastrobu/apple-mail-mcp/internal/opts/typed_flags"
 	"github.com/dastrobu/apple-mail-mcp/internal/tools"
 	"github.com/jessevdk/go-flags"
@@ -12,16 +12,31 @@ import (
 
 // Options defines the command-line options for the MCP server
 type Options struct {
-	Version        bool                  `long:"version" short:"v" description:"Show version information and exit"`
+	Version bool `long:"version" short:"v" description:"Show version information and exit"`
+
+	Run        RunCmd        `command:"run" description:"Run the server"`
+	Launchd    LaunchdCmd    `command:"launchd" description:"Manage launchd service"`
+	Completion CompletionCmd `command:"completion" description:"Generate completion scripts"`
+	Tool       ToolCmd       `command:"tool" description:"Execute a tool directly"`
+}
+
+// RunCmd defines the 'run' command
+type RunCmd struct {
 	Transport      typed_flags.Transport `long:"transport" env:"APPLE_MAIL_MCP_TRANSPORT" description:"Transport type: stdio or http" default:"stdio"`
 	Port           int                   `long:"port" env:"APPLE_MAIL_MCP_PORT" description:"HTTP port (only used with --transport=http)" default:"8787"`
 	Host           string                `long:"host" env:"APPLE_MAIL_MCP_HOST" description:"HTTP host (only used with --transport=http)" default:"localhost"`
 	Debug          bool                  `long:"debug" env:"APPLE_MAIL_MCP_DEBUG" description:"Enable debug logging of tool calls and results to stderr"`
 	RichTextStyles string                `long:"rich-text-styles" env:"APPLE_MAIL_MCP_RICH_TEXT_STYLES" description:"Path to custom rich text styles YAML file (uses embedded default if not specified)"`
 
-	Launchd    LaunchdCmd    `command:"launchd" description:"Manage launchd service"`
-	Completion CompletionCmd `command:"completion" description:"Generate completion scripts"`
-	Tool       ToolCmd       `command:"tool" description:"Execute a tool directly"`
+	Handler func() error
+}
+
+// Execute runs the run command
+func (c *RunCmd) Execute(args []string) error {
+	if c.Handler != nil {
+		return c.Handler()
+	}
+	return nil
 }
 
 // CompletionCmd holds completion subcommands
@@ -52,7 +67,13 @@ type LaunchdCmd struct {
 // LaunchdCreateCmd represents the 'launchd create' command
 type LaunchdCreateCmd struct {
 	DisableRunAtLoad bool `long:"disable-run-at-load" description:"Disable automatic startup on login (service must be started manually)"`
-	Handler          func() error
+
+	// Configuration for the service
+	Port  int    `long:"port" description:"HTTP port for the service" default:"8787"`
+	Host  string `long:"host" description:"HTTP host for the service" default:"localhost"`
+	Debug bool   `long:"debug" description:"Enable debug logging for the service"`
+
+	Handler func() error
 }
 
 // Execute runs the launchd create command
@@ -266,13 +287,7 @@ func Parse() (*flags.Parser, error) {
 	// This allows local development with .env files while working in production with env vars
 	_ = godotenv.Load()
 
-	// Set defaults from launchd constants
-	if GlobalOpts.Port == 0 {
-		GlobalOpts.Port = launchd.DefaultPort
-	}
-	if GlobalOpts.Host == "" {
-		GlobalOpts.Host = launchd.DefaultHost
-	}
+	// Defaults are now handled by struct tags in subcommands or local to handlers.
 
 	parser := flags.NewParser(&GlobalOpts, flags.HelpFlag|flags.PassDoubleDash)
 
@@ -288,10 +303,10 @@ func Parse() (*flags.Parser, error) {
 				// No command specified - that's OK, we'll run the server
 				return parser, nil
 			default:
-				return nil, err
+				return nil, fmt.Errorf("failed to parse options: %w", err)
 			}
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to parse options: %w", err)
 	}
 
 	return parser, nil

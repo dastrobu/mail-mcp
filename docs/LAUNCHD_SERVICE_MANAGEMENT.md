@@ -22,19 +22,25 @@ The `internal/launchd` package provides programmatic launchd management, split i
   - This ensures Homebrew upgrades work correctly (symlink updates, not version-specific Cellar path)
 - `PlistPath()` - Returns path to plist file (`common.go`)
 
-**Usage Pattern:**
 **Implementation Pattern:**
 ```go
+// options is *opts.LaunchdCreateCmd
 cfg, err := launchd.DefaultConfig()
 if err != nil {
     return err
 }
 
 // Override defaults from command-line flags
-cfg.Port = options.Port
-cfg.Host = options.Host
-cfg.Debug = options.Debug
-if options.Launchd.Create.DisableRunAtLoad {
+if options.Host != launchd.DefaultHost {
+    cfg.Host = options.Host
+}
+if options.Port != launchd.DefaultPort {
+    cfg.Port = options.Port
+}
+if options.Debug {
+    cfg.Debug = options.Debug
+}
+if options.DisableRunAtLoad {
     cfg.RunAtLoad = false
 }
 
@@ -44,9 +50,10 @@ return launchd.Create(cfg)
 
 **Command Structure:**
 - Main command: `launchd`
-- Subcommands: `create`, `remove`
+- Subcommands: `create`, `remove`, `restart`
 - Examples: 
   - `./apple-mail-mcp launchd create` - Create service with automatic startup on login
+  - `./apple-mail-mcp launchd create --port 9000` - Create service on custom port
   - `./apple-mail-mcp launchd create --disable-run-at-load` - Create service without automatic startup
   - `./apple-mail-mcp launchd remove` - Remove service
 
@@ -87,7 +94,8 @@ The service creates `~/Library/Logs/com.github.dastrobu.apple-mail-mcp/` directo
 All error messages in launchd package start with emojis (❌ for errors, ⚠️ for warnings) for better visibility.
 
 **Homebrew Integration:**
-The `.goreleaser.yaml` includes a `post_install` script that automatically recreates the launchd service after `brew upgrade`, preserving all user settings:
+The `.goreleaser.yaml
+` includes a `post_install` script that automatically recreates the launchd service after `brew upgrade`, preserving all user settings:
 ```ruby
 post_install: |
   # Check if launchd service exists and recreate it after upgrade
@@ -112,11 +120,11 @@ post_install: |
     
     # Recreate the service preserving all settings
     cmd = ["#{bin}/apple-mail-mcp"]
+    cmd << "launchd"
+    cmd << "create"
     cmd << port_flag unless port_flag.empty?
     cmd << host_flag unless host_flag.empty?
     cmd << debug_flag unless debug_flag.empty?
-    cmd << "launchd"
-    cmd << "create"
     cmd << run_at_load_flag unless run_at_load_flag.empty?
     
     system(*cmd.reject(&:empty?))

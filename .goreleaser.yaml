@@ -78,7 +78,7 @@ brews:
       bin.install "apple-mail-mcp"
 
     service: |
-      run [opt_bin/"apple-mail-mcp", "--transport=http"]
+      run [opt_bin/"apple-mail-mcp", "run", "--transport=http"]
       keep_alive true
       log_path var/"log/apple-mail-mcp.log"
       error_log_path var/"log/apple-mail-mcp.err"

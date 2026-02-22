@@ -35,8 +35,11 @@ func main() {
 		completion.GenerateBash()
 		return nil
 	}
+	opts.GlobalOpts.Run.Handler = func() error {
+		return run(&opts.GlobalOpts.Run)
+	}
 	opts.GlobalOpts.Launchd.Create.Handler = func() error {
-		return createLaunchd(&opts.GlobalOpts)
+		return createLaunchd(&opts.GlobalOpts.Launchd.Create)
 	}
 	opts.GlobalOpts.Launchd.Remove.Handler = func() error {
 		return removeLaunchd()
@@ -67,10 +70,8 @@ func main() {
 		return
 	}
 
-	// No command specified - run the server
-	if err := run(&opts.GlobalOpts); err != nil {
-		log.Fatalf("Server error: %v", err)
-	}
+	// No command specified - show help
+	parser.WriteHelp(os.Stdout)
 }
 
 // setupLogger creates and adds the appropriate logger to the context
@@ -116,15 +117,15 @@ func debugMiddleware(debug bool) func(mcp.MethodHandler) mcp.MethodHandler {
 }
 
 // createServer creates and configures a new MCP server instance
-func createServer(options *opts.Options, richtextConfig *richtext.PreparedConfig) *mcp.Server {
+func createServer(debug bool, richtextConfig *richtext.PreparedConfig) *mcp.Server {
 	srv := mcp.NewServer(&mcp.Implementation{
 		Name:    serverName,
 		Version: version,
 	}, nil)
 
 	// Add debug middleware if debug mode is enabled
-	if options.Debug {
-		srv.AddReceivingMiddleware(debugMiddleware(options.Debug))
+	if debug {
+		srv.AddReceivingMiddleware(debugMiddleware(debug))
 	}
 
 	// Register all tools
@@ -133,7 +134,7 @@ func createServer(options *opts.Options, richtextConfig *richtext.PreparedConfig
 	return srv
 }
 
-func run(options *opts.Options) error {
+func run(options *opts.RunCmd) error {
 	// Convert Transport to string for comparison
 	transport := string(options.Transport)
 
@@ -165,7 +166,7 @@ func run(options *opts.Options) error {
 	// Log to stderr (stdout is used for MCP communication in stdio mode)
 	log.Printf("Apple Mail MCP Server v%s (commit: %s, built: %s) initialized\n", version, commit, date)
 
-	srv := createServer(options, richtextConfig)
+	srv := createServer(options.Debug, richtextConfig)
 
 	// Run the server with the selected transport
 	switch transport {
@@ -210,7 +211,7 @@ func run(options *opts.Options) error {
 }
 
 // createLaunchd creates the launchd service
-func createLaunchd(options *opts.Options) error {
+func createLaunchd(options *opts.LaunchdCreateCmd) error {
 	cfg, err := launchd.DefaultConfig()
 	if err != nil {
 		return err
@@ -226,7 +227,7 @@ func createLaunchd(options *opts.Options) error {
 	if options.Debug {
 		cfg.Debug = options.Debug
 	}
-	if options.Launchd.Create.DisableRunAtLoad {
+	if options.DisableRunAtLoad {
 		cfg.RunAtLoad = false
 	}
 
@@ -255,13 +256,8 @@ func registerToolHandlers() {
 
 	// Helper to load richtext config
 	getRichtextConfig := func() *richtext.PreparedConfig {
-		// Use GlobalOpts.RichTextStyles
-		cfg, err := richtext.LoadConfig(opts.GlobalOpts.RichTextStyles)
-		if err != nil {
-			// If loading fails, log warning and use default (empty path results in default)
-			log.Printf("Warning: Failed to load rich text styles: %v. Using defaults.", err)
-			cfg, _ = richtext.LoadConfig("")
-		}
+		// Use default configuration since tool command doesn't support rich text config flag yet
+		cfg, _ := richtext.LoadConfig("")
 		return cfg
 	}
 
