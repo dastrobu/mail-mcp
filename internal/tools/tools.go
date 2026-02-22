@@ -13,9 +13,9 @@ func RegisterAll(srv *mcp.Server, richtextConfig *richtext.PreparedConfig) {
 	RegisterGetSelectedMessages(srv)
 	RegisterCreateReplyDraft(srv, richtextConfig)
 	RegisterReplaceReplyDraft(srv, richtextConfig)
-	RegisterListDrafts(srv)
 	RegisterCreateOutgoingMessage(srv, richtextConfig)
-	RegisterListOutgoingMessages(srv)
 	RegisterReplaceOutgoingMessage(srv, richtextConfig)
+	RegisterListDrafts(srv)
+	RegisterListOutgoingMessages(srv)
 	RegisterFindMessages(srv)
 }

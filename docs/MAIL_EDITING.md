@@ -1004,7 +1004,7 @@ const msg = Mail.make({
   new: "outgoingMessage",
   withProperties: {
     subject: "Hello",
-    visible: true,
+
   },
 });
 

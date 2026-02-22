@@ -19,10 +19,10 @@ import (
 var createReplyDraftScript string
 
 type CreateReplyDraftInput struct {
-	AccountName    string   `json:"account_name" jsonschema:"The name of the account to reply from" long:"account" description:"The name of the account to reply from"`
+	Account        string   `json:"account" jsonschema:"The name of the account to reply from" long:"account" description:"The name of the account to reply from"`
 	MailboxPath    []string `json:"mailbox_path" jsonschema:"Path to the mailbox containing the message (e.g., [\"Inbox\", \"My Subfolder\"])" long:"mailbox-path" description:"Path to the mailbox containing the message (e.g., [\"Inbox\", \"My Subfolder\"]). Can be specified multiple times."`
 	MessageID      int      `json:"message_id" jsonschema:"The ID of the message to reply to" long:"message-id" description:"The ID of the message to reply to"`
-	ReplyContent   string   `json:"reply_content" jsonschema:"The content of the reply body. Supports Markdown formatting." long:"reply-content" description:"The content of the reply body. Supports Markdown formatting."`
+	Content        string   `json:"content" jsonschema:"The content of the reply body. Supports Markdown formatting." long:"content" description:"The content of the reply body. Supports Markdown formatting."`
 	ContentFormat  *string  `json:"content_format,omitempty" jsonschema:"Content format: 'plain' or 'markdown'. Default is 'markdown'." long:"content-format" description:"Content format: 'plain' or 'markdown'. Default is 'markdown'."`
 	ReplyToAll     *bool    `json:"reply_to_all,omitempty" jsonschema:"Set to true to reply to all recipients. Default is false." long:"reply-to-all" description:"Set to true to reply to all recipients. Default is false."`
 	VipsOnlyReply  *bool    `json:"vips_only_reply,omitempty" jsonschema:"(Not implemented) Set to true to only reply to VIPs" long:"vips-only-reply" description:"(Not implemented) Set to true to only reply to VIPs"`
@@ -52,8 +52,8 @@ func RegisterCreateReplyDraft(srv *mcp.Server, richtextConfig *richtext.Prepared
 
 func HandleCreateReplyDraft(ctx context.Context, request *mcp.CallToolRequest, input CreateReplyDraftInput, richtextConfig *richtext.PreparedConfig) (*mcp.CallToolResult, any, error) {
 	// 1. Input Validation
-	if input.AccountName == "" || input.MessageID == 0 || len(input.MailboxPath) == 0 || input.ReplyContent == "" {
-		return nil, nil, fmt.Errorf("account_name, message_id, mailbox_path, and reply_content are required")
+	if input.Account == "" || input.MessageID == 0 || len(input.MailboxPath) == 0 || input.Content == "" {
+		return nil, nil, fmt.Errorf("account, message_id, mailbox_path, and content are required")
 	}
 	contentFormat, err := ValidateAndNormalizeContentFormat(input.ContentFormat)
 	if err != nil {
@@ -68,7 +68,7 @@ func HandleCreateReplyDraft(ctx context.Context, request *mcp.CallToolRequest, i
 	}
 
 	// 2. Prepare content for clipboard and JXA
-	htmlContent, plainContent, err := ToClipboardContent(input.ReplyContent, contentFormat)
+	htmlContent, plainContent, err := ToClipboardContent(input.Content, contentFormat)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -82,7 +82,7 @@ func HandleCreateReplyDraft(ctx context.Context, request *mcp.CallToolRequest, i
 	}
 
 	// 3. Execute JXA to create the reply window
-	resultAny, err := jxa.Execute(ctx, createReplyDraftScript, input.AccountName, string(mailboxPathJSON), fmt.Sprintf("%d", input.MessageID), fmt.Sprintf("%t", replyToAll))
+	resultAny, err := jxa.Execute(ctx, createReplyDraftScript, input.Account, string(mailboxPathJSON), fmt.Sprintf("%d", input.MessageID), fmt.Sprintf("%t", replyToAll))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create reply draft: %w", err)
 	}
@@ -107,7 +107,7 @@ func HandleCreateReplyDraft(ctx context.Context, request *mcp.CallToolRequest, i
 		"subject":             subject,
 		"message":             "Reply created and content pasted via Accessibility API. Note: Paste success is not verified.",
 		"original_message_id": input.MessageID,
-		"account":             input.AccountName,
+		"account":             input.Account,
 		"mailbox_path":        input.MailboxPath,
 	}
 	return nil, finalResult, nil

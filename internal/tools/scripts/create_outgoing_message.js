@@ -25,6 +25,7 @@ function run(argv) {
   const ccRecipientsJson = argv[2] || "";
   const bccRecipientsJson = argv[3] || "";
   const fromAccount = argv[4] || ""; // Account to send from (optional)
+  const senderOverride = argv[5] || ""; // Specific sender email (optional)
 
   try {
     // Validate subject (optional but recommended)
@@ -54,9 +55,11 @@ function run(argv) {
       log("Error parsing BCC recipients: " + e.toString());
     }
 
-    // Find the sender account if specified
+    // Determine the sender
     let senderProperty = {};
-    if (fromAccount) {
+    if (senderOverride) {
+      senderProperty = { sender: senderOverride };
+    } else if (fromAccount) {
       try {
         const accounts = Mail.accounts.whose({ name: fromAccount })();
         if (accounts.length > 0) {
@@ -74,7 +77,6 @@ function run(argv) {
     }
 
     // Create the message
-    // Note: We set visible: true to ensure the window opens for accessibility interaction
     const msg = Mail.OutgoingMessage({
       subject: subject,
       visible: true,

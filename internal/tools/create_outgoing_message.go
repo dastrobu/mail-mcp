@@ -26,7 +26,7 @@ type CreateOutgoingMessageInput struct {
 	ToRecipients  *[]string `json:"to_recipients,omitempty" jsonschema:"List of To recipients" long:"to-recipients" description:"List of To recipients. Can be specified multiple times."`
 	CcRecipients  *[]string `json:"cc_recipients,omitempty" jsonschema:"List of CC recipients" long:"cc-recipients" description:"List of CC recipients. Can be specified multiple times."`
 	BccRecipients *[]string `json:"bcc_recipients,omitempty" jsonschema:"List of BCC recipients" long:"bcc-recipients" description:"List of BCC recipients. Can be specified multiple times."`
-	Visible       *bool     `json:"visible,omitempty" jsonschema:"Whether the message window should be visible. Default is true for pasting." long:"visible" description:"Whether the message window should be visible. Default is true for pasting."`
+	Sender        *string   `json:"sender,omitempty" jsonschema:"The sender email address (optional, overrides account default)" long:"sender" description:"The sender email address (optional, overrides account default)"`
 }
 
 func RegisterCreateOutgoingMessage(srv *mcp.Server, richtextConfig *richtext.PreparedConfig) {
@@ -85,12 +85,18 @@ func HandleCreateOutgoingMessage(ctx context.Context, request *mcp.CallToolReque
 	}
 
 	// 3. Execute JXA to create the draft window
+	sender := ""
+	if input.Sender != nil {
+		sender = *input.Sender
+	}
+
 	resultAny, err := jxa.Execute(ctx, createOutgoingMessageScript,
 		input.Subject,
 		string(toRecipientsJSON),
 		string(ccRecipientsJSON),
 		string(bccRecipientsJSON),
-		input.Account)
+		input.Account,
+		sender)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create outgoing message: %w", err)
 	}

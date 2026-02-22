@@ -34,7 +34,6 @@ function run(argv) {
         const id = msg.id();
         const subject = msg.subject();
         const sender = msg.sender();
-        const visible = msg.visible();
 
         // Get content (may be empty)
         let content = "";
@@ -110,7 +109,6 @@ function run(argv) {
           outgoing_id: id,
           subject: subject,
           sender: sender,
-          visible: visible,
           content_preview: contentPreview,
           content_length: content.length,
           to_recipients: toRecipients,
