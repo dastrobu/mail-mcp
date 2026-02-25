@@ -68,12 +68,7 @@ homebrew_casks:
 
 
 
-    service: |
-      run [opt_bin/"mail-mcp", "run", "--transport=http"]
-      keep_alive true
-      log_path var/"log/mail-mcp.log"
-      error_log_path var/"log/mail-mcp.err"
-      environment_variables APPLE_MAIL_MCP_PORT: "8787", APPLE_MAIL_MCP_HOST: "localhost"
+
 
     caveats: |
       Apple Mail MCP Server has been installed!
