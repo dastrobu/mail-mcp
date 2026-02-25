@@ -1,7 +1,7 @@
 .PHONY: build clean test fmt vet install-hooks doctoc help
 
 # Binary name
-BINARY=apple-mail-mcp
+BINARY=mail-mcp
 
 # Build the binary
 build:

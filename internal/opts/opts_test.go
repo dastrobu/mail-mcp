@@ -13,7 +13,7 @@ func TestParse_DefaultValues(t *testing.T) {
 	defer func() { os.Args = oldArgs }()
 
 	// Set args to use run command
-	os.Args = []string{"apple-mail-mcp", "run"}
+	os.Args = []string{"mail-mcp", "run"}
 
 	_, err := Parse()
 	if err != nil {
@@ -37,7 +37,7 @@ func TestParse_StdioTransport(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	os.Args = []string{"apple-mail-mcp", "run", "--transport=stdio"}
+	os.Args = []string{"mail-mcp", "run", "--transport=stdio"}
 
 	_, err := Parse()
 	if err != nil {
@@ -53,7 +53,7 @@ func TestParse_HTTPTransport(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	os.Args = []string{"apple-mail-mcp", "run", "--transport=http"}
+	os.Args = []string{"mail-mcp", "run", "--transport=http"}
 
 	_, err := Parse()
 	if err != nil {
@@ -69,7 +69,7 @@ func TestParse_HTTPWithCustomPort(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	os.Args = []string{"apple-mail-mcp", "run", "--transport=http", "--port=4567"}
+	os.Args = []string{"mail-mcp", "run", "--transport=http", "--port=4567"}
 
 	_, err := Parse()
 	if err != nil {
@@ -89,7 +89,7 @@ func TestParse_HTTPWithCustomHost(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	os.Args = []string{"apple-mail-mcp", "run", "--transport=http", "--host=0.0.0.0", "--port=9000"}
+	os.Args = []string{"mail-mcp", "run", "--transport=http", "--host=0.0.0.0", "--port=9000"}
 
 	_, err := Parse()
 	if err != nil {
@@ -113,7 +113,7 @@ func TestParse_InvalidTransport(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	os.Args = []string{"apple-mail-mcp", "run", "--transport=invalid"}
+	os.Args = []string{"mail-mcp", "run", "--transport=invalid"}
 
 	_, err := Parse()
 	if err == nil {
@@ -136,7 +136,7 @@ func TestParse_InvalidPort(t *testing.T) {
 			oldArgs := os.Args
 			defer func() { os.Args = oldArgs }()
 
-			os.Args = []string{"apple-mail-mcp", "run", "--transport=http", "--port=" + tt.port}
+			os.Args = []string{"mail-mcp", "run", "--transport=http", "--port=" + tt.port}
 
 			_, err := Parse()
 			// The flags library might catch this before our validation
@@ -156,7 +156,7 @@ func TestParse_AllOptions(t *testing.T) {
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
 
-	os.Args = []string{"apple-mail-mcp", "run", "--transport=http", "--host=127.0.0.1", "--port=4567", "--debug"}
+	os.Args = []string{"mail-mcp", "run", "--transport=http", "--host=127.0.0.1", "--port=4567", "--debug"}
 
 	_, err := Parse()
 	if err != nil {
@@ -190,7 +190,7 @@ func TestParse_EnvironmentVariables(t *testing.T) {
 		os.Unsetenv("APPLE_MAIL_MCP_HOST")
 	}()
 
-	os.Args = []string{"apple-mail-mcp", "run"}
+	os.Args = []string{"mail-mcp", "run"}
 
 	_, err := Parse()
 	if err != nil {
@@ -223,7 +223,7 @@ func TestParse_FlagsOverrideEnvironment(t *testing.T) {
 	}()
 
 	// Flags should override environment
-	os.Args = []string{"apple-mail-mcp", "run", "--transport=http", "--port=6000"}
+	os.Args = []string{"mail-mcp", "run", "--transport=http", "--port=6000"}
 
 	_, err := Parse()
 	if err != nil {

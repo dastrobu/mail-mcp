@@ -112,7 +112,7 @@ func TestDefaultConfig(t *testing.T) {
 		t.Fatalf("Failed to get home dir: %v", err)
 	}
 
-	expectedLogDir := filepath.Join(home, "Library", "Logs", "com.github.dastrobu.apple-mail-mcp")
+	expectedLogDir := filepath.Join(home, "Library", "Logs", "com.github.dastrobu.mail-mcp")
 	if !filepath.HasPrefix(cfg.LogPath, expectedLogDir) {
 		t.Errorf("LogPath not in expected directory: got %s, want prefix %s", cfg.LogPath, expectedLogDir)
 	}
@@ -141,7 +141,7 @@ func TestDefaultConfig_BinaryPath(t *testing.T) {
 
 	// If 'which' found a binary, it should be at /opt/homebrew/bin or similar
 	// If not found, it should be the current executable path
-	if filepath.Base(cfg.BinaryPath) != "apple-mail-mcp" &&
+	if filepath.Base(cfg.BinaryPath) != "mail-mcp" &&
 		!strings.HasSuffix(cfg.BinaryPath, ".test") {
 		t.Errorf("BinaryPath basename unexpected: %s", filepath.Base(cfg.BinaryPath))
 	}

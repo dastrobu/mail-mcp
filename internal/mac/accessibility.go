@@ -179,7 +179,7 @@ func EnsureAccessibility() error {
 	}
 	executable, err := os.Executable()
 	if err != nil {
-		executable = "apple-mail-mcp"
+		executable = "mail-mcp"
 	}
 	executableName := filepath.Base(executable)
 	return fmt.Errorf(`accessibility permission is required. Please follow these steps:

@@ -510,7 +510,7 @@ styles:
 		},
 		{
 			name:       "code block in list item",
-			markdown:   "1. Install tool:\n    ```bash\n    brew install apple-mail-mcp\n    ```",
+			markdown:   "1. Install tool:\n    ```bash\n    brew install mail-mcp\n    ```",
 			wantBlocks: 3, // List item + code block line + trailing empty line from code block
 			checkFunc: func(t *testing.T, blocks []StyledBlock) {
 				// First block is the list item itself
@@ -529,7 +529,7 @@ styles:
 				// Code block line starts with sub-indent (3 spaces)
 				// The code block prefix (2 spaces) is NOT added automatically because we use
 				// a custom config for these tests where code_block prefix content is empty
-				expectedCodeLine := "   brew install apple-mail-mcp\n"
+				expectedCodeLine := "   brew install mail-mcp\n"
 				if blocks[1].Text != expectedCodeLine {
 					t.Errorf("Block 1: expected text %q, got %q", expectedCodeLine, blocks[1].Text)
 				}

@@ -794,7 +794,7 @@ details.
 | Rich text | ✅ Full HTML via clipboard paste |
 | Threading | ✅ Via `reply()` |
 | Credentials | None required |
-| Permissions | ❌ apple-mail-mcp needs Accessibility access |
+| Permissions | ❌ mail-mcp needs Accessibility access |
 | Reliability | ⚠️ Medium — depends on timing, frontmost app, cursor position |
 | Setup burden | ⚠️ Each MCP host app needs separate Accessibility grant |
 
@@ -856,7 +856,7 @@ The `create_reply_draft` and `replace_reply_draft` tools implement the [Clipboar
 
 ### Requirements
 
-- **Accessibility Permissions:** The **apple-mail-mcp** binary must be granted Accessibility access in **System Settings -> Privacy & Security -> Accessibility**. Granting access to the binary directly is recommended for better security.
+- **Accessibility Permissions:** The **mail-mcp** binary must be granted Accessibility access in **System Settings -> Privacy & Security -> Accessibility**. Granting access to the binary directly is recommended for better security.
 - **Interactive:** A Mail.app window will briefly pop up and focus during the operation.
 
 ## ObjC Bridge from JXA
@@ -919,7 +919,7 @@ $.CGEventPost($.kCGHIDEventTap, keyDown);
 $.CGEventPost($.kCGHIDEventTap, keyUp);
 ```
 
-**Prerequisite:** The **apple-mail-mcp** binary
+**Prerequisite:** The **mail-mcp** binary
 must be granted Accessibility access in **System Settings → Privacy & Security
 → Accessibility**. Granting access to the binary directly is recommended for better security. This is a manual setup step.
 

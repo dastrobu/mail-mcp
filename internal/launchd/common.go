@@ -9,7 +9,7 @@ import (
 
 const (
 	// Label is the launchd service identifier
-	Label = "com.github.dastrobu.apple-mail-mcp"
+	Label = "com.github.dastrobu.mail-mcp"
 
 	// PlistFilename is the name of the plist file
 	PlistFilename = Label + ".plist"
@@ -21,10 +21,10 @@ const (
 	DefaultHost = "localhost"
 
 	// DefaultLogPath is the default log file path
-	DefaultLogPath = "~/Library/Logs/com.github.dastrobu.apple-mail-mcp/apple-mail-mcp.log"
+	DefaultLogPath = "~/Library/Logs/com.github.dastrobu.mail-mcp/mail-mcp.log"
 
 	// DefaultErrPath is the default error file path
-	DefaultErrPath = "~/Library/Logs/com.github.dastrobu.apple-mail-mcp/apple-mail-mcp.err"
+	DefaultErrPath = "~/Library/Logs/com.github.dastrobu.mail-mcp/mail-mcp.err"
 )
 
 // Config holds the launchd service configuration

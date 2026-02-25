@@ -19,14 +19,14 @@ macOS requires explicit permission for applications to control other application
 
 When you run the server with `--transport=http`, the server runs as a daemon process. However, **the parent process that launches the binary determines the permission**.
 
-**Important:** If you launch from Terminal (`./apple-mail-mcp --transport=http`), Terminal is still the parent process, so macOS will ask for **Terminal's** permission, not the binary's.
+**Important:** If you launch from Terminal (`./mail-mcp --transport=http`), Terminal is still the parent process, so macOS will ask for **Terminal's** permission, not the binary's.
 
-To get permissions granted to the `apple-mail-mcp` binary itself, you must launch it **without Terminal as the parent**.
+To get permissions granted to the `mail-mcp` binary itself, you must launch it **without Terminal as the parent**.
 
 ### Permission Behavior
 
-- **Permission granted to:** The `apple-mail-mcp` binary itself
-- **Appears in System Settings as:** `apple-mail-mcp`
+- **Permission granted to:** The `mail-mcp` binary itself
+- **Appears in System Settings as:** `mail-mcp`
 - **Prompt timing:** First time the binary executes `osascript`
 - **Persistence:** Permission stays with the binary across restarts
 
@@ -45,13 +45,13 @@ Use the built-in `launchd create` subcommand:
 
 ```bash
 # Set up the launchd service (default port 8787)
-./apple-mail-mcp launchd create
+./mail-mcp launchd create
 
 # Or with custom port
-./apple-mail-mcp --port=3000 launchd create
+./mail-mcp --port=3000 launchd create
 
 # Or with custom host and port
-./apple-mail-mcp --host=0.0.0.0 --port=3000 launchd create
+./mail-mcp --host=0.0.0.0 --port=3000 launchd create
 ```
 
 The subcommand will automatically:
@@ -61,16 +61,16 @@ The subcommand will automatically:
 
 On first run, macOS shows permission prompt:
 ```
-"apple-mail-mcp" wants to control "Mail.app"
+"mail-mcp" wants to control "Mail.app"
 ```
 
 Click **OK** to grant permission. Server is ready - connect MCP clients to `http://localhost:8787`.
 
 #### Option 2: Double-Click in Finder
 
-1. Open Finder and navigate to the `apple-mail-mcp` binary
+1. Open Finder and navigate to the `mail-mcp` binary
 2. Double-click the binary
-3. macOS will prompt for permission for `apple-mail-mcp` (not Terminal)
+3. macOS will prompt for permission for `mail-mcp` (not Terminal)
 4. Click **OK** to grant access
 
 #### Option 3: From Terminal (Quick Testing Only)
@@ -78,7 +78,7 @@ Click **OK** to grant permission. Server is ready - connect MCP clients to `http
 ⚠️ **Note:** This will prompt for **Terminal's** permission, not the binary's:
 
 ```bash
-./apple-mail-mcp --transport=http
+./mail-mcp --transport=http
 ```
 
 On first run, macOS shows:
@@ -96,7 +96,7 @@ Configure clients to connect to the HTTP endpoint:
 ```json
 {
   "mcpServers": {
-    "apple-mail": {
+    "mail-mcp": {
       "url": "http://localhost:8787"
     }
   }
@@ -112,7 +112,7 @@ Configure clients to connect to the HTTP endpoint:
 When you run the server with STDIO transport (default):
 
 ```bash
-./apple-mail-mcp
+./mail-mcp
 ```
 
 The server runs as a **child process** of whatever launched it (Terminal, Claude Desktop, etc.). When it executes `osascript`, macOS sees the **parent process** as the requesting process.
@@ -135,7 +135,7 @@ The server runs as a **child process** of whatever launched it (Terminal, Claude
 
 1. Launch the server (or let your MCP client launch it):
    ```bash
-   ./apple-mail-mcp
+   ./mail-mcp
    ```
 
 2. On first run, macOS shows permission prompt:
@@ -154,8 +154,8 @@ The server runs as a **child process** of whatever launched it (Terminal, Claude
 ```json
 {
   "mcpServers": {
-      "apple-mail": {
-          "command": "/path/to/apple-mail-mcp"
+      "mail-mcp": {
+          "command": "/path/to/mail-mcp"
       }
   }
 }
@@ -167,7 +167,7 @@ The server runs as a **child process** of whatever launched it (Terminal, Claude
 
 | Aspect | HTTP Transport | STDIO Transport |
 |--------|---------------|-----------------|
-| Permission granted to | `apple-mail-mcp` binary (if launched via launchd/Finder) OR parent process (if launched from Terminal) | Parent process (Terminal, Claude, etc.) |
+| Permission granted to | `mail-mcp` binary (if launched via launchd/Finder) OR parent process (if launched from Terminal) | Parent process (Terminal, Claude, etc.) |
 | Number of permissions | One (for the binary) | One per parent application |
 | Client needs permissions | No | Yes |
 | Permission portability | Follows binary | Tied to parent app |
@@ -182,7 +182,7 @@ If the prompt doesn't appear or you need to modify permissions:
 1. Open **System Settings**
 2. Navigate to **Privacy & Security** → **Automation**
 3. Find the entry:
-   - **HTTP mode:** Look for `apple-mail-mcp`
+   - **HTTP mode:** Look for `mail-mcp`
    - **STDIO mode:** Look for the parent application (Terminal, Claude, etc.)
 4. Toggle the **Mail** checkbox to enable/disable
 5. Restart the server or parent application
@@ -198,13 +198,13 @@ If permission is not granted, you will receive an error message that directs you
 Due to how macOS caches permissions for running processes, you **must restart the server** after granting Accessibility permission for the first time.
 
 1.  **Trigger the Prompt:** The first time you run a tool that requires Accessibility, it will fail, but it will open the System Settings app for you.
-2.  **Grant Permission:** In `System Settings > Privacy & Security > Accessibility`, find `apple-mail-mcp` in the list and **enable the toggle switch**.
+2.  **Grant Permission:** In `System Settings > Privacy & Security > Accessibility`, find `mail-mcp` in the list and **enable the toggle switch**.
 3.  **Restart the Service:** This is the most important step. The running service is not aware of the permission change yet. You must restart it.
 
     ```bash
     # Restart the launchd service to apply the new permission
-    ./apple-mail-mcp launchd restart
-    # (Or 'brew services restart apple-mail-mcp' if installed via Homebrew)
+    ./mail-mcp launchd restart
+    # (Or 'brew services restart mail-mcp' if installed via Homebrew)
     ```
 4.  **Try Again:** Run the tool a second time. The new process will have the correct permissions, and the tool should now succeed.
 
@@ -247,7 +247,7 @@ Then restart the server - macOS will prompt for permission again.
 If you see many entries in System Settings → Automation:
 - These likely came from using STDIO mode with different parent applications
 - Switch to HTTP mode and remove the old entries
-- Only the `apple-mail-mcp` entry will be needed going forward
+- Only the `mail-mcp` entry will be needed going forward
 
 **Clean up old entries:**
 ```bash
@@ -266,7 +266,7 @@ To test permission prompts from scratch:
 tccutil reset AppleEvents
 
 # 2. Start server via launchd (will prompt for permission)
-./apple-mail-mcp launchd create
+./mail-mcp launchd create
 
 # 3. Click OK when prompted
 # 4. Server is now ready with fresh permissions
@@ -279,25 +279,25 @@ tccutil reset AppleEvents
 
 ```bash
 # Set up launchd service using the built-in subcommand
-./apple-mail-mcp launchd create
+./mail-mcp launchd create
 
 # Check it's running
-launchctl list | grep com.github.dastrobu.apple-mail-mcp
+launchctl list | grep com.github.dastrobu.mail-mcp
 
 # View logs
-tail -f /tmp/apple-mail-mcp.log
+tail -f /tmp/mail-mcp.log
 
 # Restart the service (useful after granting Accessibility permissions)
-./apple-mail-mcp launchd restart
+./mail-mcp launchd restart
 
 # To remove the service later
-./apple-mail-mcp launchd remove
+./mail-mcp launchd remove
 ```
 
 **For quick testing from Terminal:**
 ```bash
 # This will prompt for Terminal's permissions
-./apple-mail-mcp --transport=http --port=3000
+./mail-mcp --transport=http --port=3000
 ```
 
 ### For Development/Testing

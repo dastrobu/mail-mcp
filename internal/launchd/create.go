@@ -23,7 +23,7 @@ func DefaultConfig() (*Config, error) {
 		return nil, fmt.Errorf("❌ failed to get executable path: %w", err)
 	}
 
-	// Try to find the binary using 'which' first (e.g., /opt/homebrew/bin/apple-mail-mcp)
+	// Try to find the binary using 'which' first (e.g., /opt/homebrew/bin/mail-mcp)
 	// This ensures we use the symlinked version that will survive upgrades
 	binaryPath, err := filepath.EvalSymlinks(currentExe)
 	if err != nil {
@@ -35,8 +35,8 @@ func DefaultConfig() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("❌ failed to get user home directory: %w", err)
 	}
-	logPath := filepath.Join(home, "Library", "Logs", "com.github.dastrobu.apple-mail-mcp", "apple-mail-mcp.log")
-	errPath := filepath.Join(home, "Library", "Logs", "com.github.dastrobu.apple-mail-mcp", "apple-mail-mcp.err")
+	logPath := filepath.Join(home, "Library", "Logs", "com.github.dastrobu.mail-mcp", "mail-mcp.log")
+	errPath := filepath.Join(home, "Library", "Logs", "com.github.dastrobu.mail-mcp", "mail-mcp.err")
 
 	return &Config{
 		BinaryPath: binaryPath,
@@ -73,13 +73,13 @@ func getBinaryVersion(binaryPath string) string {
 		return ""
 	}
 
-	// Parse output like "apple-mail-mcp version 0.1.0"
+	// Parse output like "mail-mcp version 0.1.0"
 	output := stdout.String()
 	lines := strings.Split(output, "\n")
 	if len(lines) > 0 {
 		// Extract version from first line
 		parts := strings.Fields(lines[0])
-		if len(parts) >= 3 && parts[0] == "apple-mail-mcp" && parts[1] == "version" {
+		if len(parts) >= 3 && parts[0] == "mail-mcp" && parts[1] == "version" {
 			return parts[2]
 		}
 	}
@@ -195,7 +195,7 @@ func Create(cfg *Config) error {
 		fmt.Printf("  Errors: %s\n", cfg.ErrPath)
 		fmt.Println()
 		fmt.Println("On first run, macOS will prompt for automation permissions.")
-		fmt.Println("Click OK to grant permission to the apple-mail-mcp binary.")
+		fmt.Println("Click OK to grant permission to the mail-mcp binary.")
 		fmt.Println()
 		fmt.Println("Useful commands:")
 		fmt.Printf("  View logs:   tail -f %s %s\n", cfg.LogPath, cfg.ErrPath)
@@ -214,9 +214,9 @@ func Create(cfg *Config) error {
 	fmt.Println()
 	fmt.Println("💡 Hint: To enable debug logging, recreate the service with:")
 	if cfg.Debug {
-		fmt.Printf("  ./apple-mail-mcp --port=%d launchd create\n", cfg.Port)
+		fmt.Printf("  ./mail-mcp --port=%d launchd create\n", cfg.Port)
 	} else {
-		fmt.Printf("  ./apple-mail-mcp --port=%d --debug launchd create\n", cfg.Port)
+		fmt.Printf("  ./mail-mcp --port=%d --debug launchd create\n", cfg.Port)
 	}
 	return fmt.Errorf("⚠️ service loaded but not running")
 }

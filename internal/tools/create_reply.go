@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dastrobu/apple-mail-mcp/internal/jxa"
-	"github.com/dastrobu/apple-mail-mcp/internal/mac"
-	"github.com/dastrobu/apple-mail-mcp/internal/richtext"
+	"github.com/dastrobu/mail-mcp/internal/jxa"
+	"github.com/dastrobu/mail-mcp/internal/mac"
+	"github.com/dastrobu/mail-mcp/internal/richtext"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

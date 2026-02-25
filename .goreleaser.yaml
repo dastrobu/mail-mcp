@@ -148,7 +148,7 @@ release:
     ### From Source
 
     ```bash
-    go install github.com/dastrobu/apple-mail-mcp@v{{ .Version }}
+    go install github.com/dastrobu/mail-mcp@v{{ .Version }}
     ```
 
     ## 📚 Documentation

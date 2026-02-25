@@ -26,7 +26,7 @@ var (
 )
 
 const (
-	serverName = "apple-mail"
+	serverName = "mail-mcp"
 )
 
 func main() {
@@ -58,7 +58,7 @@ func main() {
 
 	// Handle version flag
 	if opts.GlobalOpts.Version {
-		fmt.Printf("apple-mail-mcp version %s\n", version)
+		fmt.Printf("mail-mcp version %s\n", version)
 		fmt.Printf("  commit: %s\n", commit)
 		fmt.Printf("  built:  %s\n", date)
 		return
@@ -173,7 +173,7 @@ func run(options *opts.RunCmd) error {
 	case "stdio":
 		log.Println("Using STDIO transport")
 		log.Println("⚠️  WARNING: STDIO transport requires high permissions and grants automation access to the parent process (Terminal, Claude Desktop, etc.)")
-		log.Println("⚠️  It is strongly recommended to use launchd instead: apple-mail-mcp launchd create")
+		log.Println("⚠️  It is strongly recommended to use launchd instead: mail-mcp launchd create")
 		log.Printf("⚠️  If STDIO is required for testing, consider running 'tccutil reset AppleEvents %s' afterwards\n", os.Args[0])
 		if err := srv.Run(ctx, &mcp.StdioTransport{}); err != nil {
 			return err

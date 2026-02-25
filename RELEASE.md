@@ -15,7 +15,7 @@ This document describes how to create a new release of the Apple Mail MCP Server
    - Copy the token
 
 3. **Add Secret to Repository**:
-   - Go to your repository settings: `https://github.com/dastrobu/apple-mail-mcp/settings/secrets/actions`
+   - Go to your repository settings: `https://github.com/dastrobu/mail-mcp/settings/secrets/actions`
    - Click "New repository secret"
    - Name: `HOMEBREW_TAP_GITHUB_TOKEN`
    - Value: Paste your GitHub token
@@ -33,7 +33,7 @@ git pull origin main
 ```
 
 Verify CI is passing:
-- Check: https://github.com/dastrobu/apple-mail-mcp/actions
+- Check: https://github.com/dastrobu/mail-mcp/actions
 
 ### 2. Test GoReleaser Locally (Optional but Recommended)
 
@@ -76,7 +76,7 @@ git push origin v0.1.0
 Once you push the tag:
 
 1. GitHub Actions automatically triggers the release workflow
-2. Watch the progress: https://github.com/dastrobu/apple-mail-mcp/actions
+2. Watch the progress: https://github.com/dastrobu/mail-mcp/actions
 3. The workflow will:
    - Build binaries for macOS (amd64 and arm64)
    - Run tests
@@ -88,30 +88,30 @@ Once you push the tag:
 
 #### Check GitHub Release
 
-1. Go to: https://github.com/dastrobu/apple-mail-mcp/releases
+1. Go to: https://github.com/dastrobu/mail-mcp/releases
 2. Verify the new release is published
 3. Check that all artifacts are present:
-   - `apple-mail-mcp_v0.1.0_darwin_amd64.tar.gz`
-   - `apple-mail-mcp_v0.1.0_darwin_arm64.tar.gz`
-   - `apple-mail-mcp_v0.1.0_checksums.txt`
+   - `mail-mcp_v0.1.0_darwin_amd64.tar.gz`
+   - `mail-mcp_v0.1.0_darwin_arm64.tar.gz`
+   - `mail-mcp_v0.1.0_checksums.txt`
 
 #### Check Homebrew Formula
 
 1. Go to: https://github.com/dastrobu/homebrew-tap
-2. Verify the formula was created/updated in `Formula/apple-mail-mcp.rb`
+2. Verify the formula was created/updated in `Formula/mail-mcp.rb`
 
 #### Test Homebrew Installation
 
 ```bash
 # Remove old version if installed
-brew uninstall apple-mail-mcp
+brew uninstall mail-mcp
 
 # Install from tap
 brew tap dastrobu/tap
-brew install apple-mail-mcp
+brew install mail-mcp
 
 # Verify installation
-apple-mail-mcp --version
+mail-mcp --version
 ```
 
 ### 6. Announce the Release (Optional)
@@ -124,7 +124,7 @@ apple-mail-mcp --version
 
 ### Release workflow fails
 
-1. Check the workflow logs: https://github.com/dastrobu/apple-mail-mcp/actions
+1. Check the workflow logs: https://github.com/dastrobu/mail-mcp/actions
 2. Common issues:
    - Missing `HOMEBREW_TAP_GITHUB_TOKEN` secret
    - Tests failing
