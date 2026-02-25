@@ -43,7 +43,7 @@ temp/
 *.log
 
 # binary
-/apple-mail-mcp
+/mail-mcp
 
 tmp*
 node_modules/

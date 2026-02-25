@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dastrobu/apple-mail-mcp/internal/md"
+	"github.com/dastrobu/mail-mcp/internal/md"
 )
 
 // ContentFormat constants for email content formatting

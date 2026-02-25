@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/dastrobu/apple-mail-mcp/internal/log"
+	"github.com/dastrobu/mail-mcp/internal/log"
 )
 
 // Result represents the result of a JXA script execution

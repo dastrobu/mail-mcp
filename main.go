@@ -9,12 +9,12 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/dastrobu/apple-mail-mcp/internal/completion"
-	"github.com/dastrobu/apple-mail-mcp/internal/launchd"
-	applog "github.com/dastrobu/apple-mail-mcp/internal/log"
-	"github.com/dastrobu/apple-mail-mcp/internal/opts"
-	"github.com/dastrobu/apple-mail-mcp/internal/richtext"
-	"github.com/dastrobu/apple-mail-mcp/internal/tools"
+	"github.com/dastrobu/mail-mcp/internal/completion"
+	"github.com/dastrobu/mail-mcp/internal/launchd"
+	applog "github.com/dastrobu/mail-mcp/internal/log"
+	"github.com/dastrobu/mail-mcp/internal/opts"
+	"github.com/dastrobu/mail-mcp/internal/richtext"
+	"github.com/dastrobu/mail-mcp/internal/tools"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

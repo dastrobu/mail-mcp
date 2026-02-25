@@ -1,4 +1,4 @@
-# Apple Mail MCP Server
+# Mail MCP Server
 
 [![CI](https://github.com/dastrobu/apple-mail-mcp/actions/workflows/ci.yaml/badge.svg)](https://github.com/dastrobu/apple-mail-mcp/actions/workflows/ci.yaml)
 
@@ -105,10 +105,10 @@ This MCP server enables AI assistants and other MCP clients to interact with App
 brew tap dastrobu/tap
 
 # Install
-brew install apple-mail-mcp
+brew install mail-mcp
 
 # Start the service (Standard)
-brew services start apple-mail-mcp
+brew services start mail-mcp
 
 # OR use the built-in subcommand for more customization (port, debug)
 apple-mail-mcp launchd create
@@ -141,7 +141,7 @@ apple-mail-mcp launchd create
 
 ```bash
 # Install directly from GitHub (requires Go 1.26+)
-go install github.com/dastrobu/apple-mail-mcp@latest
+go install github.com/dastrobu/mail-mcp@latest
 
 # Set up launchd service
 apple-mail-mcp launchd create
@@ -158,11 +158,11 @@ apple-mail-mcp launchd create
 ### Option 4: Build from Source
 
 ```bash
-git clone https://github.com/dastrobu/apple-mail-mcp.git
-cd apple-mail-mcp
+git clone https://github.com/dastrobu/mail-mcp.git
+cd mail-mcp
 
 # Build locally
-go build -o apple-mail-mcp .
+go build -v -o mail-mcp .
 
 # Set up launchd service
 ./apple-mail-mcp launchd create
@@ -188,7 +188,7 @@ Create a launch agent to run the server in the background.
 
 ```bash
 # Run the setup subcommand
-apple-mail-mcp launchd create
+mail-mcp launchd create
 ```
 
 ➡️ See [MCP Client Configuration](#mcp-client-configuration) to connect your MCP client.
@@ -217,7 +217,7 @@ apple-mail-mcp launchd create --disable-run-at-load
 **To remove the service:**
 
 ```bash
-apple-mail-mcp launchd remove
+mail-mcp launchd remove
 ```
 
 Check logs: `tail -f ~/Library/Logs/com.github.dastrobu.apple-mail-mcp/apple-mail-mcp.log ~/Library/Logs/com.github.dastrobu.apple-mail-mcp/apple-mail-mcp.err`
@@ -267,7 +267,7 @@ Configure VS Code (`~/Library/Application Support/Code/User/mcp.json` on macOS):
 ```json
 {
   "servers": {
-    "apple-mail": {
+    "mail-mcp": {
       "type": "http",
       "url": "http://localhost:8787"
     }
@@ -284,7 +284,7 @@ Configure Zed (`~/.config/zed/settings.json`):
 ```json
 {
   "context_servers": {
-    "apple-mail-mcp": {
+    "mail-mcp": {
       "url": "http://localhost:8787"
     }
   }
@@ -300,7 +300,7 @@ Configure Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_c
 ```json
 {
   "mcpServers": {
-    "apple-mail": {
+    "mail-mcp": {
       "url": "http://localhost:8787"
     }
   }
@@ -471,10 +471,10 @@ Enable tab completion for commands and flags:
 
 ```bash
 # Generate completion script
-apple-mail-mcp completion bash > /usr/local/etc/bash_completion.d/apple-mail-mcp
+mail-mcp completion bash > /usr/local/etc/bash_completion.d/mail-mcp
 
 # Or add to your ~/.bashrc or ~/.bash_profile
-source <(apple-mail-mcp completion bash)
+source <(mail-mcp completion bash)
 ```
 
 After sourcing, you can use tab completion:
@@ -918,7 +918,7 @@ See [docs/RICH_TEXT_DESIGN.md](docs/RICH_TEXT_DESIGN.md) for the complete stylin
 When you upgrade via Homebrew, the launchd service will automatically restart with the new version:
 
 ```bash
-brew upgrade apple-mail-mcp
+brew upgrade mail-mcp
 ```
 
 The upgrade process:
@@ -953,12 +953,12 @@ This will recreate the service with the new binary path.
 
 ```bash
 # Step 1: Stop the service (whichever method you used)
-brew services stop apple-mail-mcp
+brew services stop mail-mcp
 # OR
-apple-mail-mcp launchd remove
+mail-mcp launchd remove
 
 # Step 2: Uninstall the package
-brew uninstall apple-mail-mcp
+brew uninstall mail-mcp
 
 # Step 3 (Optional): Remove logs
 # If you used brew services:
@@ -983,10 +983,10 @@ If you installed manually, remove the launchd service first, then delete the bin
 
 ```bash
 # Remove the launchd service
-apple-mail-mcp launchd remove
+mail-mcp launchd remove
 
 # Remove the binary (adjust path as needed)
-rm /usr/local/bin/apple-mail-mcp
+sudo rm /usr/local/bin/mail-mcp
 
 # Optionally remove logs
 rm -r ~/Library/Logs/com.github.dastrobu.apple-mail-mcp/

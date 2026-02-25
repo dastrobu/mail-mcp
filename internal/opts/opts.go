@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dastrobu/apple-mail-mcp/internal/opts/typed_flags"
-	"github.com/dastrobu/apple-mail-mcp/internal/tools"
+	"github.com/dastrobu/mail-mcp/internal/opts/typed_flags"
+	"github.com/dastrobu/mail-mcp/internal/tools"
 	"github.com/jessevdk/go-flags"
 	"github.com/joho/godotenv"
 )

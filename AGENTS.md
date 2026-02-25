@@ -111,7 +111,7 @@ Always ensure the server builds and runs cleanly without panicking after changes
 
 ```bash
 # Verify it builds and starts correctly
-go build -o apple-mail-mcp . && timeout 2s ./apple-mail-mcp
+go build -o mail-mcp . && timeout 2s ./mail-mcp
 
 # Run tests
 go test -v -count=1 ./...

@@ -1,16 +1,16 @@
-# GoReleaser configuration for apple-mail-mcp
+# GoReleaser configuration for mail-mcp
 # https://goreleaser.com
 
 version: 2
 
 # Project metadata
-project_name: apple-mail-mcp
+project_name: mail-mcp
 
 # Build configuration
 builds:
-  - id: apple-mail-mcp
+  - id: mail-mcp
     main: .
-    binary: apple-mail-mcp
+    binary: mail-mcp
 
     # macOS only (Mail.app dependency)
     goos:
@@ -35,7 +35,7 @@ builds:
 
 # Archive configuration
 archives:
-  - id: apple-mail-mcp
+  - id: mail-mcp
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
     files:
@@ -61,7 +61,7 @@ brews:
 
     directory: Formula
 
-    homepage: https://github.com/dastrobu/apple-mail-mcp
+    homepage: https://github.com/dastrobu/mail-mcp
     description: "MCP server providing programmatic access to macOS Mail.app"
 
     license: MIT
@@ -72,16 +72,16 @@ brews:
         type: build
 
     test: |
-      system "#{bin}/apple-mail-mcp", "--version"
+      system "#{bin}/mail-mcp", "--version"
 
     install: |
-      bin.install "apple-mail-mcp"
+      bin.install "mail-mcp"
 
     service: |
-      run [opt_bin/"apple-mail-mcp", "run", "--transport=http"]
+      run [opt_bin/"mail-mcp", "run", "--transport=http"]
       keep_alive true
-      log_path var/"log/apple-mail-mcp.log"
-      error_log_path var/"log/apple-mail-mcp.err"
+      log_path var/"log/mail-mcp.log"
+      error_log_path var/"log/mail-mcp.err"
       environment_variables APPLE_MAIL_MCP_PORT: "8787", APPLE_MAIL_MCP_HOST: "localhost"
 
     caveats: |
@@ -91,27 +91,27 @@ brews:
       via launchd or brew services (not from Terminal directly).
 
       Option 1: Use Homebrew Services (Standard)
-        brew services start apple-mail-mcp
+        brew services start mail-mcp
 
       Option 2: Use custom launchd service (for custom port/debug)
-        apple-mail-mcp launchd create
+        mail-mcp launchd create
 
       To remove the launchd service:
-        apple-mail-mcp launchd remove
+        mail-mcp launchd remove
 
-      Before uninstalling with 'brew uninstall apple-mail-mcp':
-        1. Stop and remove the service: brew services stop apple-mail-mcp OR apple-mail-mcp launchd remove
-        2. Then run: brew uninstall apple-mail-mcp
+      Before uninstalling with 'brew uninstall mail-mcp':
+        1. Stop and remove the service: brew services stop mail-mcp OR mail-mcp launchd remove
+        2. Then run: brew uninstall mail-mcp
 
       For more information:
-        • README: https://github.com/dastrobu/apple-mail-mcp#readme
-        • Docs: https://github.com/dastrobu/apple-mail-mcp/tree/main/docs
+        • README: https://github.com/dastrobu/mail-mcp#readme
+        • Docs: https://github.com/dastrobu/mail-mcp/tree/main/docs
 
 # Release configuration
 release:
   github:
     owner: dastrobu
-    name: apple-mail-mcp
+    name: mail-mcp
 
   draft: false
   prerelease: auto
@@ -130,19 +130,19 @@ release:
 
     ```bash
     brew tap dastrobu/tap
-    brew install apple-mail-mcp
+    brew install mail-mcp
     ```
 
     ### Binary Download
 
     Download the appropriate archive for your system:
-    - **Intel Mac**: `apple-mail-mcp_{{ .Version }}_darwin_amd64.tar.gz`
-    - **Apple Silicon**: `apple-mail-mcp_{{ .Version }}_darwin_arm64.tar.gz`
+    - **Intel Mac**: `mail-mcp_{{ .Version }}_darwin_amd64.tar.gz`
+    - **Apple Silicon**: `mail-mcp_{{ .Version }}_darwin_arm64.tar.gz`
 
     Extract and install:
     ```bash
-    tar -xzf apple-mail-mcp_{{ .Version }}_darwin_*.tar.gz
-    sudo mv apple-mail-mcp /usr/local/bin/
+    tar -xzf mail-mcp_{{ .Version }}_darwin_*.tar.gz
+    sudo mv mail-mcp /usr/local/bin/
     ```
 
     ### From Source
@@ -153,7 +153,7 @@ release:
 
     ## 📚 Documentation
 
-    See the [README](https://github.com/dastrobu/apple-mail-mcp#readme) for usage instructions.
+    See the [README](https://github.com/dastrobu/mail-mcp#readme) for usage instructions.
 
 # Changelog configuration
 changelog:

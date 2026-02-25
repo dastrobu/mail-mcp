@@ -4,7 +4,7 @@ import (
 	"context"
 	_ "embed"
 
-	"github.com/dastrobu/apple-mail-mcp/internal/jxa"
+	"github.com/dastrobu/mail-mcp/internal/jxa"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

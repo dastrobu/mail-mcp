@@ -39,7 +39,7 @@ jobs:
         fi
 
     - name: Build
-      run: go build -v -o apple-mail-mcp
+      run: go build -v -o mail-mcp
 
     - name: Run tests
       run: go test -v -count=1 ./...

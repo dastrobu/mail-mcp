@@ -1,4 +1,4 @@
-module github.com/dastrobu/apple-mail-mcp
+module github.com/dastrobu/mail-mcp
 
 go 1.26
 

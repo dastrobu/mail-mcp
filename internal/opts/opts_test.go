@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/dastrobu/apple-mail-mcp/internal/opts/typed_flags"
+	"github.com/dastrobu/mail-mcp/internal/opts/typed_flags"
 )
 
 func TestParse_DefaultValues(t *testing.T) {

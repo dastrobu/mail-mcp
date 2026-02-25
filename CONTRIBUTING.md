@@ -16,13 +16,13 @@ Thank you for your interest in contributing to the Apple Mail MCP Server! This d
 1. Fork the repository on GitHub
 2. Clone your fork:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/apple-mail-mcp.git
-   cd apple-mail-mcp
+   git clone https://github.com/YOUR_USERNAME/mail-mcp.git
+   cd mail-mcp
    ```
 
 3. Add the upstream repository:
    ```bash
-   git remote add upstream https://github.com/dastrobu/apple-mail-mcp.git
+   git remote add upstream https://github.com/dastrobu/mail-mcp.git
    ```
 
 4. Install dependencies:
