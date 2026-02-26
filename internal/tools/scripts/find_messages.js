@@ -74,46 +74,60 @@ function run(argv) {
       });
     }
 
-    // Navigate to target mailbox using path
-    let currentContainer = targetAccount;
-    let targetMailbox;
-
-    try {
-      for (let i = 0; i < mailboxPath.length; i++) {
-        const part = mailboxPath[i];
+        // Robust mailbox traversal function
+    function findMailboxByPath(account, targetPath) {
+        if (!targetPath || targetPath.length === 0) return account;
+        
         try {
-          const nextMailbox = currentContainer.mailboxes[part];
-          nextMailbox.name(); // Verify existence
-          currentContainer = nextMailbox;
-        } catch (e) {
-          // If lookup fails, gather available mailboxes
-          let availableNames = [];
-          try {
-            const available = currentContainer.mailboxes();
-            for (let j = 0; j < available.length; j++) {
-              availableNames.push(available[j].name());
+            let current = account;
+            for (let i = 0; i < targetPath.length; i++) {
+                const part = targetPath[i];
+                let next = null;
+                try { next = current.mailboxes.whose({name: part})()[0]; } catch(e){}
+                
+                if (!next) { try { next = current.mailboxes[part]; next.name(); } catch(e){} }
+                if (!next) throw new Error("not found");
+                current = next;
             }
-          } catch (err) {
-            availableNames = ["(Error listing mailboxes)"];
-          }
+            return current;
+        } catch(e) {}
 
-          throw new Error(
-            'Mailbox "' +
-              part +
-              '" not found in "' +
-              (i === 0 ? accountName : mailboxPath[i - 1]) +
-              '". Available mailboxes: ' +
-              availableNames.join(", "),
-          );
-        }
-      }
-      targetMailbox = currentContainer;
-    } catch (e) {
-      return JSON.stringify({
-        success: false,
-        error: e.message,
-      });
+        try {
+            const allMailboxes = account.mailboxes();
+            for (let i = 0; i < allMailboxes.length; i++) {
+                const mbx = allMailboxes[i];
+                const path = [];
+                let current = mbx;
+                while (current) {
+                    try {
+                        const name = current.name();
+                        if (name === account.name()) break;
+                        path.unshift(name);
+                        current = current.container();
+                    } catch (e) { break; }
+                }
+                if (path.length === targetPath.length) {
+                    let match = true;
+                    for (let j = 0; j < path.length; j++) {
+                        if (path[j] !== targetPath[j]) { match = false; break; }
+                    }
+                    if (match) return mbx;
+                }
+            }
+        } catch(e) {}
+        return null;
     }
+
+    let targetAccountRef = typeof targetAccount !== "undefined" ? targetAccount : accounts[0];
+    let targetMailbox = findMailboxByPath(targetAccountRef, mailboxPath);
+    if (!targetMailbox) {
+        return JSON.stringify({
+            success: false,
+            error: "Mailbox path '" + mailboxPath.join(" > ") + "' not found in account '" + accountName + "'."
+        });
+    }
+    let currentContainer = targetMailbox; // Used by get_message_content
+    let parentMailbox = targetMailbox;    // Used by some scripts if any
 
     // Build whose() filter conditions
     const conditions = [];

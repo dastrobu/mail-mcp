@@ -70,70 +70,58 @@ function run(argv) {
     }
     log(`Successfully found account '${accountName}'.`);
 
-    // --- Improved Mailbox Traversal Logic ---
-    let currentContainer;
-    const topLevelMailboxName = mailboxPath[0];
+    // Robust mailbox traversal function
+    function findMailboxByPath(account, targetPath) {
+        if (!targetPath || targetPath.length === 0) return account;
+        
+        try {
+            let current = account;
+            for (let i = 0; i < targetPath.length; i++) {
+                const part = targetPath[i];
+                let next = null;
+                try { next = current.mailboxes.whose({name: part})()[0]; } catch(e){}
+                
+                if (!next) { try { next = current.mailboxes[part]; next.name(); } catch(e){} }
+                if (!next) throw new Error("not found");
+                current = next;
+            }
+            return current;
+        } catch(e) {}
 
-    log(
-      `Searching for top-level mailbox '${topLevelMailboxName}' associated with account '${accountName}'.`,
-    );
-    const topLevelMailboxes = Mail.mailboxes.whose({
-      name: topLevelMailboxName,
-    })();
-
-    if (topLevelMailboxes.length === 0) {
-      return JSON.stringify({
-        success: false,
-        error: `Mailbox '${topLevelMailboxName}' not found anywhere in Mail.app.`,
-        errorCode: "MAILBOX_NOT_FOUND",
-        logs: logs.join("\n"),
-      });
+        try {
+            const allMailboxes = account.mailboxes();
+            for (let i = 0; i < allMailboxes.length; i++) {
+                const mbx = allMailboxes[i];
+                const path = [];
+                let current = mbx;
+                while (current) {
+                    try {
+                        const name = current.name();
+                        if (name === account.name()) break;
+                        path.unshift(name);
+                        current = current.container();
+                    } catch (e) { break; }
+                }
+                if (path.length === targetPath.length) {
+                    let match = true;
+                    for (let j = 0; j < path.length; j++) {
+                        if (path[j] !== targetPath[j]) { match = false; break; }
+                    }
+                    if (match) return mbx;
+                }
+            }
+        } catch(e) {}
+        return null;
     }
 
-    let foundTopLevel = false;
-    for (let i = 0; i < topLevelMailboxes.length; i++) {
-      const mbx = topLevelMailboxes[i];
-      try {
-        if (mbx.account.name() === accountName) {
-          currentContainer = mbx;
-          foundTopLevel = true;
-          log(
-            `Found top-level mailbox '${topLevelMailboxName}' correctly linked to account '${accountName}'.`,
-          );
-          break;
-        }
-      } catch (e) {
-        // Ignore mailboxes that don't have an account
-      }
-    }
-
-    if (!foundTopLevel) {
-      return JSON.stringify({
-        success: false,
-        error: `Mailbox '${topLevelMailboxName}' was found, but none are associated with account '${accountName}'.`,
-        errorCode: "MAILBOX_NOT_IN_ACCOUNT",
-        logs: logs.join("\n"),
-      });
-    }
-
-    for (let i = 1; i < mailboxPath.length; i++) {
-      const part = mailboxPath[i];
-      log(`Traversing to sub-mailbox: '${part}'`);
-      const subMailboxes = currentContainer.mailboxes.whose({ name: part })();
-      if (subMailboxes.length === 0) {
+    let targetMailbox = findMailboxByPath(accounts[0], mailboxPath);
+    if (!targetMailbox) {
         return JSON.stringify({
-          success: false,
-          error: `Sub-mailbox '${part}' not found in path '${mailboxPath.slice(0, i).join(" > ")}'.`,
-          errorCode: "MAILBOX_NOT_FOUND",
-          logs: logs.join("\n"),
+            success: false,
+            error: "Mailbox path '" + mailboxPath.join(" > ") + "' not found in account '" + accountName + "'."
         });
-      }
-      currentContainer = subMailboxes[0];
     }
-    const targetMailbox = currentContainer;
-    log(
-      `Successfully navigated to final mailbox: '${mailboxPath.join(" > ")}'.`,
-    );
+
     // --- End of Traversal Logic ---
 
     const messages = targetMailbox.messages.whose({ id: messageId })();
