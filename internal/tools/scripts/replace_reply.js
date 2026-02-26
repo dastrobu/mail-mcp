@@ -81,16 +81,56 @@ function run(argv) {
       });
     }
 
-    let targetMailbox = account;
-    for (const part of mailboxPath) {
-      const subMailbox = targetMailbox.mailboxes[part];
-      if (!subMailbox.exists()) {
+    // Robust mailbox traversal function
+    function findMailboxByPath(account, targetPath) {
+        if (!targetPath || targetPath.length === 0) return account;
+        
+        try {
+            let current = account;
+            for (let i = 0; i < targetPath.length; i++) {
+                const part = targetPath[i];
+                let next = null;
+                try { next = current.mailboxes.whose({name: part})()[0]; } catch(e){}
+                
+                if (!next) { try { next = current.mailboxes[part]; next.name(); } catch(e){} }
+                if (!next) throw new Error("not found");
+                current = next;
+            }
+            return current;
+        } catch(e) {}
+
+        try {
+            const allMailboxes = account.mailboxes();
+            for (let i = 0; i < allMailboxes.length; i++) {
+                const mbx = allMailboxes[i];
+                const path = [];
+                let current = mbx;
+                while (current) {
+                    try {
+                        const name = current.name();
+                        if (name === account.name()) break;
+                        path.unshift(name);
+                        current = current.container();
+                    } catch (e) { break; }
+                }
+                if (path.length === targetPath.length) {
+                    let match = true;
+                    for (let j = 0; j < path.length; j++) {
+                        if (path[j] !== targetPath[j]) { match = false; break; }
+                    }
+                    if (match) return mbx;
+                }
+            }
+        } catch(e) {}
+        return null;
+    }
+
+    let targetMailbox = findMailboxByPath(account, mailboxPath);
+    if (!targetMailbox) {
         return JSON.stringify({
-          success: false,
-          error: `Mailbox path invalid: '${part}' not found.`,
+            success: false,
+            error: "Mailbox path '" + mailboxPath.join(" > ") + "' not found in account '" + accountName + "'."
         });
-      }
-      targetMailbox = subMailbox;
     }
 
     const messages = targetMailbox.messages.whose({ id: messageId })();

@@ -507,27 +507,69 @@ function getMailboxPath(mailbox, accountName) {
 
 ### Navigating to Nested Mailboxes
 
-Use chained name lookups:
+Simply chaining name lookups (e.g. `account.mailboxes["Inbox"]`) can fail due to localization, IMAP container folders (like `[Google Mail]`), and special characters.
+
+Instead, use a robust hierarchical lookup with a fallback search. If direct name lookups or `whose()` filters fail at any step in the path, fallback to iterating over all mailboxes in the account, reconstructing their paths, and comparing them.
 
 ```javascript
-// Parse mailboxPath from JSON
-const mailboxPath = JSON.parse('["Inbox", "GitHub"]');
+function findMailboxByPath(account, targetPath) {
+    if (!targetPath || targetPath.length === 0) return account;
+    
+    // 1. Try hierarchical traversal
+    try {
+        let current = account;
+        for (let i = 0; i < targetPath.length; i++) {
+            const part = targetPath[i];
+            let next = null;
+            // Attempt multiple lookup strategies
+            try { next = current.mailboxes.whose({name: part})()[0]; } catch(e){}
+            if (!next) { try { next = current.mailboxes.byName(part); next.name(); } catch(e){} }
+            if (!next) { try { next = current.mailboxes[part]; next.name(); } catch(e){} }
+            if (!next) throw new Error("not found");
+            current = next;
+        }
+        return current;
+    } catch(e) {}
 
-// Start at account level
-let targetMailbox = account.mailboxes[mailboxPath[0]];
-
-// Chain through nested mailboxes
-for (let i = 1; i < mailboxPath.length; i++) {
-  targetMailbox = targetMailbox.mailboxes[mailboxPath[i]];
+    // 2. Fallback: iterate all mailboxes and match paths
+    try {
+        const allMailboxes = account.mailboxes();
+        for (let i = 0; i < allMailboxes.length; i++) {
+            const mbx = allMailboxes[i];
+            const path = [];
+            let current = mbx;
+            while (current) {
+                try {
+                    const name = current.name();
+                    if (name === account.name()) break;
+                    path.unshift(name);
+                    current = current.container();
+                } catch (e) { break; }
+            }
+            if (path.length === targetPath.length) {
+                let match = true;
+                for (let j = 0; j < path.length; j++) {
+                    if (path[j] !== targetPath[j]) { match = false; break; }
+                }
+                if (match) return mbx;
+            }
+        }
+    } catch(e) {}
+    
+    return null;
 }
 
-// Now targetMailbox points to Inbox > GitHub
+// Parse mailboxPath from JSON
+const mailboxPath = JSON.parse('["[Google Mail]", "Alle Nachrichten"]');
+
+// Robustly find target mailbox
+const targetMailbox = findMailboxByPath(account, mailboxPath);
 ```
 
 **Why This Works:**
-- JXA supports name-based indexing: `account.mailboxes["Inbox"]`
-- Object Specifiers can be chained: `inbox.mailboxes["GitHub"]`
-- No loops or `whose()` needed at mailbox level
+- JXA supports `whose()` queries which can sometimes find mailboxes where bracket syntax fails.
+- The fallback correctly discovers nested folders hiding under invisible IMAP container names (like `[Google Mail]`).
+- Bypasses issues with local vs. remote mailbox translations on macOS.
 
 ### Message Lookup with whose()
 
