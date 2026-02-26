@@ -43,61 +43,35 @@ function run(argv) {
   // 4. Execution wrapped in try/catch
   try {
     let draftFound = null;
-    let accountName = "";
+    let accountName = "Unknown";
 
-    // 1. Search in every account's "Drafts" mailbox
-    const accounts = Mail.accounts();
-    for (let i = 0; i < accounts.length; i++) {
-      const account = accounts[i];
-      try {
-        // Access the drafts mailbox for the account
-        // account.draftsMailbox() returns the mailbox object
-        const draftsBox = account.draftsMailbox();
+    try {
+      const draftsBox = Mail.draftsMailbox();
+      const messages = draftsBox.messages.whose({ id: draftId })();
 
-        // Use whose() for fast filtering
-        const messages = draftsBox.messages.whose({ id: draftId })();
-
-        if (messages.length > 0) {
-          draftFound = messages[0];
-          accountName = account.name();
-          log(`Found draft in account: ${accountName}`);
-          break;
-        }
-      } catch (e) {
-        // Account might not have a drafts mailbox configured
+      if (messages.length > 0) {
+        draftFound = messages[0];
+        log(`Found draft with ID ${draftId} in top-level Drafts mailbox.`);
       }
-    }
-
-    // 2. If not found, search in local "Drafts" mailboxes (On My Mac)
-    if (!draftFound) {
-      try {
-        const localDrafts = Mail.mailboxes.whose({
-          _or: [{ name: "Drafts" }, { name: "Entwürfe" }],
-        })();
-
-        for (let i = 0; i < localDrafts.length; i++) {
-          const messages = localDrafts[i].messages.whose({ id: draftId })();
-          if (messages.length > 0) {
-            draftFound = messages[0];
-            accountName = "Local / On My Mac";
-            log(`Found draft in local mailbox: ${localDrafts[i].name()}`);
-            break;
-          }
-        }
-      } catch (e) {
-        log(`Checking local mailboxes failed: ${e.message}`);
-      }
+    } catch (e) {
+      log(`Error searching top-level Drafts mailbox: ${e.message}`);
     }
 
     if (!draftFound) {
       return JSON.stringify({
         success: false,
-        error: `Draft with ID ${draftId} not found in any account.`,
+        error: `Draft with ID ${draftId} not found in the Drafts mailbox.`,
         logs: logs.join("\n"),
       });
     }
 
     const subject = draftFound.subject();
+
+    try {
+      accountName = draftFound.mailbox().account().name();
+    } catch (e) {
+      log(`Could not get account name for reporting: ${e.message}`);
+    }
 
     // Delete the draft
     Mail.delete(draftFound);

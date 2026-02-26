@@ -30,16 +30,8 @@ function run(argv) {
     });
   }
 
-  const accountName = args.account || "";
+  const targetAccountName = args.account || "";
   const limit = args.limit || 50;
-
-  // Validate account name
-  if (!accountName) {
-    return JSON.stringify({
-      success: false,
-      error: "Account name is required",
-    });
-  }
 
   // Validate limit
   if (limit < 1 || limit > 1000) {
@@ -50,45 +42,52 @@ function run(argv) {
   }
 
   try {
-    // Use name lookup syntax to find account directly
-    let targetAccount;
-    try {
-      targetAccount = Mail.accounts[accountName];
-    } catch (e) {
-      return JSON.stringify({
-        success: false,
-        error:
-          'Account "' + accountName + '" not found. Error: ' + e.toString(),
-      });
+    if (targetAccountName) {
+      // Verify account exists by trying to access a property
+      try {
+        const targetAccount = Mail.accounts[targetAccountName];
+        targetAccount.name();
+      } catch (e) {
+        return JSON.stringify({
+          success: false,
+          error:
+            'Account "' +
+            targetAccountName +
+            '" not found. Please verify the account name is correct.',
+        });
+      }
     }
 
-    // Verify account exists by trying to access a property
-    try {
-      targetAccount.name();
-    } catch (e) {
-      return JSON.stringify({
-        success: false,
-        error:
-          'Account "' +
-          accountName +
-          '" not found. Please verify the account name is correct.',
-      });
-    }
-
-    // Get Drafts mailbox for this account
-    // Use Mail.draftsMailbox() which is locale-independent
+    // Get Drafts mailbox
+    // Use Mail.draftsMailbox() which is locale-independent and top-level
     const draftsMailbox = Mail.draftsMailbox();
 
     // Get all draft messages
     const allDrafts = draftsMailbox.messages();
     const totalDrafts = allDrafts.length;
 
-    // Limit the number of drafts to process
-    const maxProcess = Math.min(totalDrafts, limit);
     const drafts = [];
+    let hasMore = false;
 
-    for (let i = 0; i < maxProcess; i++) {
+    for (let i = 0; i < totalDrafts; i++) {
+      if (drafts.length >= limit) {
+        hasMore = true;
+        break;
+      }
+
       const msg = allDrafts[i];
+      let msgAccountName = "";
+
+      try {
+        msgAccountName = msg.mailbox().account().name();
+      } catch (e) {
+        // Local drafts or other edge cases might not have an account name
+      }
+
+      // Filter by account if specified
+      if (targetAccountName && msgAccountName !== targetAccountName) {
+        continue;
+      }
 
       try {
         // Get basic properties
@@ -117,21 +116,18 @@ function run(argv) {
         try {
           toCount = msg.toRecipients.length;
         } catch (e) {
-          log("Error reading To recipients count: " + e.toString());
           toCount = 0;
         }
 
         try {
           ccCount = msg.ccRecipients.length;
         } catch (e) {
-          log("Error reading CC recipients count: " + e.toString());
           ccCount = 0;
         }
 
         try {
           bccCount = msg.bccRecipients.length;
         } catch (e) {
-          log("Error reading BCC recipients count: " + e.toString());
           bccCount = 0;
         }
 
@@ -142,9 +138,7 @@ function run(argv) {
           for (let j = 0; j < toRecips.length; j++) {
             toRecipients.push(toRecips[j].address());
           }
-        } catch (e) {
-          log("Error reading To recipients: " + e.toString());
-        }
+        } catch (e) {}
 
         const ccRecipients = [];
         try {
@@ -152,9 +146,7 @@ function run(argv) {
           for (let j = 0; j < ccRecips.length; j++) {
             ccRecipients.push(ccRecips[j].address());
           }
-        } catch (e) {
-          log("Error reading CC recipients: " + e.toString());
-        }
+        } catch (e) {}
 
         const bccRecipients = [];
         try {
@@ -162,17 +154,13 @@ function run(argv) {
           for (let j = 0; j < bccRecips.length; j++) {
             bccRecipients.push(bccRecips[j].address());
           }
-        } catch (e) {
-          log("Error reading BCC recipients: " + e.toString());
-        }
+        } catch (e) {}
 
-        // Get mailbox (should be Drafts)
+        // Get mailbox name
         let mailboxName = "Drafts";
         try {
           mailboxName = msg.mailbox().name();
-        } catch (e) {
-          log("Error reading mailbox name: " + e.toString());
-        }
+        } catch (e) {}
 
         drafts.push({
           draft_id: id,
@@ -190,7 +178,7 @@ function run(argv) {
           bcc_count: bccCount,
           total_recipients: toCount + ccCount + bccCount,
           mailbox: mailboxName,
-          account: accountName,
+          account: msgAccountName,
         });
       } catch (e) {
         log("Error reading draft " + i + ": " + e.toString());
@@ -205,7 +193,7 @@ function run(argv) {
         count: drafts.length,
         total_drafts: totalDrafts,
         limit: limit,
-        has_more: totalDrafts > limit,
+        has_more: hasMore,
       },
       logs: logs.join("\n"),
     });

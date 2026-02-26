@@ -15,7 +15,7 @@ var listDraftsScript string
 
 // ListDraftsInput defines input parameters for list_drafts tool
 type ListDraftsInput struct {
-	Account string `json:"account" jsonschema:"Name of the email account" long:"account" description:"Name of the email account"`
+	Account string `json:"account,omitempty" jsonschema:"Optional: Name of the email account to filter drafts by" long:"account" description:"Optional: Name of the email account to filter drafts by"`
 	Limit   int    `json:"limit,omitempty" jsonschema:"Maximum number of drafts to return (1-1000, default: 50)" long:"limit" description:"Maximum number of drafts to return (1-1000, default: 50)"`
 }
 
@@ -24,7 +24,7 @@ func RegisterListDrafts(srv *mcp.Server) {
 	mcp.AddTool(srv,
 		&mcp.Tool{
 			Name:        "list_drafts",
-			Description: "Lists draft messages from the Drafts mailbox for a specific account. Returns Message.id() values for persistent drafts saved in the Drafts mailbox. These are different from OutgoingMessage objects. Use list_outgoing_messages to see in-memory drafts instead.",
+			Description: "Lists draft messages from the global Drafts mailbox, optionally filtered by a specific account. Returns Message.id() values for persistent drafts saved in the Drafts mailbox. These are different from OutgoingMessage objects. Use list_outgoing_messages to see in-memory drafts instead.",
 			InputSchema: GenerateSchema[ListDraftsInput](),
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "List Draft Messages",

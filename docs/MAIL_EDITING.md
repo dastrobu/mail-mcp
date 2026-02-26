@@ -433,11 +433,32 @@ Key findings:
 
 ### Finding the Drafts Mailbox
 
-Use the built-in `Application` property instead of searching by name:
+The `draftsMailbox()` method is a **top-level property** of the `Application` object (`Mail.draftsMailbox()`), not a property of individual `Account` objects. Attempting to call `account.draftsMailbox()` will throw an error in JXA.
+
+Use the global `Application` property instead of searching by name:
 
 ```javascript
 // ✅ Works regardless of locale (Drafts, Entwürfe, Brouillons, etc.)
+// And represents the unified, top-level Drafts mailbox
 const draftsMailbox = Mail.draftsMailbox();
+
+// ❌ Throws an error: accounts do not have a draftsMailbox property
+// const draftsBox = account.draftsMailbox();
+```
+
+To find drafts for a specific account, you must iterate through the global drafts and filter by the message's account name:
+
+```javascript
+const allDrafts = Mail.draftsMailbox().messages();
+for (let i = 0; i < allDrafts.length; i++) {
+  try {
+    if (allDrafts[i].mailbox().account().name() === "Target Account") {
+      // Found a draft for the target account
+    }
+  } catch (e) {
+    // Some local drafts might not have an account name
+  }
+}
 ```
 
 ## Nested Mailbox Support
@@ -1106,7 +1127,7 @@ setting) may be overwritten by the first write to `content`.
    and recipient headers that maintain the email thread.
 
 8. **Use `Mail.draftsMailbox()`** to find drafts. Do not search by mailbox
-   name — it varies by locale.
+   name — it varies by locale. Remember that `draftsMailbox()` is a top-level `Application` property, not an `Account` property.
 
 9. **Do not attempt to modify `Message.content`** (saved messages in
    mailboxes). It is read-only. API calls may appear to succeed but have no
