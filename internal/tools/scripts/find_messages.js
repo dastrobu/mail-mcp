@@ -177,10 +177,10 @@ function run(argv) {
     let filteredMessages;
     if (conditions.length === 1) {
       // Single condition
-      filteredMessages = targetMailbox.messages.whose(conditions[0])();
+      filteredMessages = targetMailbox.messages.whose(conditions[0]);
     } else {
       // Multiple conditions - use _and
-      filteredMessages = targetMailbox.messages.whose({ _and: conditions })();
+      filteredMessages = targetMailbox.messages.whose({ _and: conditions });
     }
 
     const totalMatches = filteredMessages.length;
