@@ -190,8 +190,11 @@ func EnsureAccessibility() error {
 3. Run the tool again to trigger a new macOS permission prompt.
 4. IMPORTANT: After granting permission, you MUST restart the service.
 
-Execute this command:
-%s launchd restart`, executableName, executableName)
+If you are running the service via Homebrew, execute this command:
+brew services restart %s
+
+Otherwise, execute this command:
+%s launchd restart`, executableName, executableName, executableName)
 }
 
 // GetMailPID returns the PID of Mail.app.
