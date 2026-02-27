@@ -1,12 +1,11 @@
 package tools
 
 import (
-	"github.com/dastrobu/mail-mcp/internal/richtext"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // RegisterAll registers all available tools with the MCP server.
-func RegisterAll(srv *mcp.Server, richtextConfig *richtext.PreparedConfig) {
+func RegisterAll(srv *mcp.Server) {
 	// Informational tools
 	RegisterListAccounts(srv)
 	RegisterListMailboxes(srv)
@@ -16,11 +15,11 @@ func RegisterAll(srv *mcp.Server, richtextConfig *richtext.PreparedConfig) {
 	RegisterListOutgoingMessages(srv)
 	RegisterListDrafts(srv)
 
-	// Message creation and manipulation tools that require rich text processing
-	RegisterCreateReply(srv, richtextConfig)
-	RegisterReplaceReply(srv, richtextConfig)
-	RegisterCreateOutgoingMessage(srv, richtextConfig)
-	RegisterReplaceOutgoingMessage(srv, richtextConfig)
+	// Message creation and manipulation tools
+	RegisterCreateReply(srv)
+	RegisterReplaceReply(srv)
+	RegisterCreateOutgoingMessage(srv)
+	RegisterReplaceOutgoingMessage(srv)
 	RegisterDeleteOutgoingMessage(srv)
 	RegisterDeleteDraft(srv)
 }

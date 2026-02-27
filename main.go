@@ -13,7 +13,7 @@ import (
 	"github.com/dastrobu/mail-mcp/internal/launchd"
 	applog "github.com/dastrobu/mail-mcp/internal/log"
 	"github.com/dastrobu/mail-mcp/internal/opts"
-	"github.com/dastrobu/mail-mcp/internal/richtext"
+
 	"github.com/dastrobu/mail-mcp/internal/tools"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -117,7 +117,7 @@ func debugMiddleware(debug bool) func(mcp.MethodHandler) mcp.MethodHandler {
 }
 
 // createServer creates and configures a new MCP server instance
-func createServer(debug bool, richtextConfig *richtext.PreparedConfig) *mcp.Server {
+func createServer(debug bool) *mcp.Server {
 	srv := mcp.NewServer(&mcp.Implementation{
 		Name:    serverName,
 		Version: version,
@@ -129,7 +129,7 @@ func createServer(debug bool, richtextConfig *richtext.PreparedConfig) *mcp.Serv
 	}
 
 	// Register all tools
-	tools.RegisterAll(srv, richtextConfig)
+	tools.RegisterAll(srv)
 
 	return srv
 }
@@ -143,21 +143,6 @@ func run(options *opts.RunCmd) error {
 	// Always add a logger to context (real logger if debug, no-op otherwise)
 	ctx = setupLogger(ctx, options.Debug)
 
-	// Load rich text rendering configuration
-	richtextConfig, err := richtext.LoadConfig(options.RichTextStyles)
-	if err != nil {
-		return fmt.Errorf("failed to load rich text styles configuration: %w", err)
-	}
-	if options.Debug {
-		log.Printf("[DEBUG] Rich text styles loaded from: %s\n",
-			func() string {
-				if options.RichTextStyles == "" {
-					return "embedded default"
-				}
-				return options.RichTextStyles
-			}())
-	}
-
 	// Note: We don't check Mail.app connectivity at startup because:
 	// 1. Mail.app may not be running yet (e.g., launchd starts before user opens Mail)
 	// 2. Each tool call will detect and report Mail.app availability gracefully
@@ -166,7 +151,7 @@ func run(options *opts.RunCmd) error {
 	// Log to stderr (stdout is used for MCP communication in stdio mode)
 	log.Printf("Apple Mail MCP Server v%s (commit: %s, built: %s) initialized\n", version, commit, date)
 
-	srv := createServer(options.Debug, richtextConfig)
+	srv := createServer(options.Debug)
 
 	// Run the server with the selected transport
 	switch transport {
@@ -254,13 +239,6 @@ func registerToolHandlers() {
 		return encoder.Encode(result)
 	}
 
-	// Helper to load richtext config
-	getRichtextConfig := func() *richtext.PreparedConfig {
-		// Use default configuration since tool command doesn't support rich text config flag yet
-		cfg, _ := richtext.LoadConfig("")
-		return cfg
-	}
-
 	opts.GlobalOpts.Tool.ListAccounts.Handler = func(input tools.ListAccountsInput) error {
 		_, data, err := tools.HandleListAccounts(context.Background(), nil, input)
 		return handleResult(data, err)
@@ -282,12 +260,12 @@ func registerToolHandlers() {
 	}
 
 	opts.GlobalOpts.Tool.CreateReply.Handler = func(input tools.CreateReplyInput) error {
-		_, data, err := tools.HandleCreateReply(context.Background(), nil, input, getRichtextConfig())
+		_, data, err := tools.HandleCreateReply(context.Background(), nil, input)
 		return handleResult(data, err)
 	}
 
 	opts.GlobalOpts.Tool.ReplaceReply.Handler = func(input tools.ReplaceReplyInput) error {
-		_, data, err := tools.HandleReplaceReply(context.Background(), nil, input, getRichtextConfig())
+		_, data, err := tools.HandleReplaceReply(context.Background(), nil, input)
 		return handleResult(data, err)
 	}
 
@@ -302,7 +280,7 @@ func registerToolHandlers() {
 	}
 
 	opts.GlobalOpts.Tool.CreateOutgoingMessage.Handler = func(input tools.CreateOutgoingMessageInput) error {
-		_, data, err := tools.HandleCreateOutgoingMessage(context.Background(), nil, input, getRichtextConfig())
+		_, data, err := tools.HandleCreateOutgoingMessage(context.Background(), nil, input)
 		return handleResult(data, err)
 	}
 
@@ -312,7 +290,7 @@ func registerToolHandlers() {
 	}
 
 	opts.GlobalOpts.Tool.ReplaceOutgoingMessage.Handler = func(input tools.ReplaceOutgoingMessageInput) error {
-		_, data, err := tools.HandleReplaceOutgoingMessage(context.Background(), nil, input, getRichtextConfig())
+		_, data, err := tools.HandleReplaceOutgoingMessage(context.Background(), nil, input)
 		return handleResult(data, err)
 	}
 

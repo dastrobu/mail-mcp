@@ -11,7 +11,6 @@ import (
 
 	"github.com/dastrobu/mail-mcp/internal/jxa"
 	"github.com/dastrobu/mail-mcp/internal/mac"
-	"github.com/dastrobu/mail-mcp/internal/richtext"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -29,7 +28,7 @@ type ReplaceOutgoingMessageInput struct {
 	Sender        *string   `json:"sender,omitempty" jsonschema:"New sender email address (optional, keeps existing if null)" long:"sender" description:"New sender email address (optional, keeps existing if null)"`
 }
 
-func RegisterReplaceOutgoingMessage(srv *mcp.Server, richtextConfig *richtext.PreparedConfig) {
+func RegisterReplaceOutgoingMessage(srv *mcp.Server) {
 	mcp.AddTool(srv,
 		&mcp.Tool{
 			Name:        "replace_outgoing_message",
@@ -44,12 +43,12 @@ func RegisterReplaceOutgoingMessage(srv *mcp.Server, richtextConfig *richtext.Pr
 			},
 		},
 		func(ctx context.Context, request *mcp.CallToolRequest, input ReplaceOutgoingMessageInput) (*mcp.CallToolResult, any, error) {
-			return HandleReplaceOutgoingMessage(ctx, request, input, richtextConfig)
+			return HandleReplaceOutgoingMessage(ctx, request, input)
 		},
 	)
 }
 
-func HandleReplaceOutgoingMessage(ctx context.Context, request *mcp.CallToolRequest, input ReplaceOutgoingMessageInput, richtextConfig *richtext.PreparedConfig) (*mcp.CallToolResult, any, error) {
+func HandleReplaceOutgoingMessage(ctx context.Context, request *mcp.CallToolRequest, input ReplaceOutgoingMessageInput) (*mcp.CallToolResult, any, error) {
 	// 1. Input Validation and Setup
 	if input.OutgoingID == 0 {
 		return nil, nil, fmt.Errorf("outgoing_id is required")

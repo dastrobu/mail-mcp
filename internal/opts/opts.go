@@ -22,11 +22,10 @@ type Options struct {
 
 // RunCmd defines the 'run' command
 type RunCmd struct {
-	Transport      typed_flags.Transport `long:"transport" env:"APPLE_MAIL_MCP_TRANSPORT" description:"Transport type: stdio or http" default:"stdio"`
-	Port           int                   `long:"port" env:"APPLE_MAIL_MCP_PORT" description:"HTTP port (only used with --transport=http)" default:"8787"`
-	Host           string                `long:"host" env:"APPLE_MAIL_MCP_HOST" description:"HTTP host (only used with --transport=http)" default:"localhost"`
-	Debug          bool                  `long:"debug" env:"APPLE_MAIL_MCP_DEBUG" description:"Enable debug logging of tool calls and results to stderr"`
-	RichTextStyles string                `long:"rich-text-styles" env:"APPLE_MAIL_MCP_RICH_TEXT_STYLES" description:"Path to custom rich text styles YAML file (uses embedded default if not specified)"`
+	Transport typed_flags.Transport `long:"transport" env:"APPLE_MAIL_MCP_TRANSPORT" description:"Transport type: stdio or http" default:"stdio"`
+	Port      int                   `long:"port" env:"APPLE_MAIL_MCP_PORT" description:"HTTP port (only used with --transport=http)" default:"8787"`
+	Host      string                `long:"host" env:"APPLE_MAIL_MCP_HOST" description:"HTTP host (only used with --transport=http)" default:"localhost"`
+	Debug     bool                  `long:"debug" env:"APPLE_MAIL_MCP_DEBUG" description:"Enable debug logging of tool calls and results to stderr"`
 
 	Handler func() error
 }

@@ -11,7 +11,6 @@ import (
 
 	"github.com/dastrobu/mail-mcp/internal/jxa"
 	"github.com/dastrobu/mail-mcp/internal/mac"
-	"github.com/dastrobu/mail-mcp/internal/richtext"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -35,7 +34,7 @@ type ReplaceReplyInput struct {
 	BccRecipients *[]string `json:"bcc_recipients,omitempty" jsonschema:"New list of BCC recipients (optional, replaces reply recipients)" long:"bcc-recipients" description:"New list of BCC recipients (optional, replaces reply recipients). Can be specified multiple times."`
 }
 
-func RegisterReplaceReply(srv *mcp.Server, richtextConfig *richtext.PreparedConfig) {
+func RegisterReplaceReply(srv *mcp.Server) {
 	mcp.AddTool(srv,
 		&mcp.Tool{
 			Name:        "replace_reply",
@@ -50,12 +49,12 @@ func RegisterReplaceReply(srv *mcp.Server, richtextConfig *richtext.PreparedConf
 			},
 		},
 		func(ctx context.Context, request *mcp.CallToolRequest, input ReplaceReplyInput) (*mcp.CallToolResult, any, error) {
-			return HandleReplaceReply(ctx, request, input, richtextConfig)
+			return HandleReplaceReply(ctx, request, input)
 		},
 	)
 }
 
-func HandleReplaceReply(ctx context.Context, request *mcp.CallToolRequest, input ReplaceReplyInput, richtextConfig *richtext.PreparedConfig) (*mcp.CallToolResult, any, error) {
+func HandleReplaceReply(ctx context.Context, request *mcp.CallToolRequest, input ReplaceReplyInput) (*mcp.CallToolResult, any, error) {
 	// 1. Input Validation and Setup
 	if input.OutgoingID == 0 || input.MessageID == 0 || input.Account == "" || len(input.MailboxPath) == 0 {
 		return nil, nil, fmt.Errorf("outgoing_id, message_id, account, and mailbox_path are required")

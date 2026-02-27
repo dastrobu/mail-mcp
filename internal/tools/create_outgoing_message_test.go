@@ -5,17 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dastrobu/mail-mcp/internal/richtext"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestHandleCreateOutgoingMessage_UnknownContentFormat(t *testing.T) {
-	// Use the default embedded config
-	config, err := richtext.LoadConfig("")
-	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
-	}
-
 	invalidFormat := "invalid"
 	input := CreateOutgoingMessageInput{
 		Account:       "Test Account",
@@ -26,7 +19,7 @@ func TestHandleCreateOutgoingMessage_UnknownContentFormat(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	_, _, err = HandleCreateOutgoingMessage(ctx, &mcp.CallToolRequest{}, input, config)
+	_, _, err := HandleCreateOutgoingMessage(ctx, &mcp.CallToolRequest{}, input)
 
 	if err == nil {
 		t.Errorf("Expected error for unknown content format, but got nil")

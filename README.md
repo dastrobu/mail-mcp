@@ -45,7 +45,6 @@ A Model Context Protocol (MCP) server providing programmatic access to macOS Mai
   - [create_outgoing_message](#create_outgoing_message)
   - [list_outgoing_messages](#list_outgoing_messages)
   - [replace_outgoing_message](#replace_outgoing_message)
-- [Custom Styling](#custom-styling)
 - [Upgrading](#upgrading)
   - [Homebrew](#homebrew)
   - [Manual Installation](#manual-installation)
@@ -324,7 +323,7 @@ mail-mcp launchd create -h     # Show launchd create options
 --port=PORT              HTTP port (default: 8787, only used with --transport=http)
 --host=HOST              HTTP host (default: localhost, only used with --transport=http)
 --debug                  Enable debug logging of tool calls and results to stderr
---rich-text-styles=PATH  Path to custom rich text styles YAML file (uses embedded default if not specified)
+
 -h, --help               Show help message
 
 Commands:
@@ -775,117 +774,7 @@ When `content_format` is set to "markdown", the content is parsed as Markdown an
 }
 ````
 
-## Custom Styling
 
-You can customize rich text styling by providing a YAML configuration file:
-
-```bash
-mail-mcp --rich-text-styles=/path/to/custom_styles.yaml
-```
-
-**Full Configuration Example:**
-
-Here's a complete example based on the [default styles](https://github.com/dastrobu/mail-mcp/blob/main/internal/richtext/config/default_styles.yaml):
-
-```yaml
-# Color definitions using YAML anchors (x- prefix makes them ignorable extensions)
-x-colors:
-  dark_gray: &50_percent_gray "#7F7F7F"
-  blue: &blue "#0000FF"
-
-defaults:
-  font: "Helvetica"
-  size: 12
-  color: null
-
-styles:
-  # Headings - customize font, size, color, and spacing
-  h1:
-    font: "Helvetica-Bold"
-    size: 20
-    color: null
-    margin_top: 10
-    margin_bottom: 5
-
-  h2:
-    font: "Helvetica-Bold"
-    size: 18
-    color: null
-    margin_top: 8
-    margin_bottom: 4
-
-  h3:
-    font: "Helvetica-Bold"
-    size: 16
-    color: null
-    margin_top: 6
-    margin_bottom: 2
-
-  # Inline styles
-  bold:
-    font: "Helvetica-Bold"
-
-  italic:
-    font: "Helvetica-Oblique"
-
-  strikethrough:
-    font: "Helvetica"
-    color: *50_percent_gray
-
-  bold_italic:
-    font: "Helvetica-BoldOblique"
-
-  code:
-    font: "Menlo-Regular"
-    size: 11
-    color: null
-
-  # Block styles
-  code_block:
-    font: "Menlo-Regular"
-    size: 11
-    color: null
-    margin_top: 6
-    margin_bottom: null
-    prefix:
-      content: "  " # Indent code blocks with 2 spaces
-
-  blockquote:
-    font: "Helvetica-Oblique"
-    size: null # Inherits from defaults
-    color: *50_percent_gray
-    margin_top: 6
-    margin_bottom: 6
-    prefix:
-      content: "> "
-
-  list:
-    margin_top: 6
-    margin_bottom: 6
-
-  list_item:
-    font: "Helvetica"
-    size: 12
-    color: null
-
-  horizontal_rule:
-    font: "Helvetica"
-    size: 1
-    color: *50_percent_gray
-
-  link:
-    color: *blue # Or null to use Mail.app's default link color
-```
-
-**Key Points:**
-
-- Colors use web format (`#RRGGBB`) and support YAML anchors for reusability
-- `margin_top` and `margin_bottom` are measured in font points
-- Set properties to `null` to inherit from defaults or parent elements
-- Margins apply to entire blocks (e.g., whole list), not individual items
-- Use `prefix.content` to add indentation or markers (code blocks, blockquotes)
-
-See [docs/RICH_TEXT_DESIGN.md](docs/RICH_TEXT_DESIGN.md) for the complete styling specification and advanced examples.
 
 **Output:**
 
@@ -904,10 +793,9 @@ See [docs/RICH_TEXT_DESIGN.md](docs/RICH_TEXT_DESIGN.md) for the complete stylin
 - The OutgoingMessage only exists in memory while Mail.app is running
 - For persistent drafts that survive Mail.app restart, use `create_reply_draft` or save the draft after creation
 - The message is NOT sent automatically - manual sending required
-- Default format is Markdown (rich text enabled by default)
-- Plain text content works as Markdown with no special characters (renders as single paragraph)
+- Default format is Markdown
+- Plain text content works as Markdown with no special characters
 - Use `content_format: "plain"` to explicitly bypass Markdown parsing
-- Rich text rendering errors fail immediately with clear error messages (no silent fallback to plain text)
 
 ## Upgrading
 

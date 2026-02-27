@@ -11,7 +11,6 @@ import (
 
 	"github.com/dastrobu/mail-mcp/internal/jxa"
 	"github.com/dastrobu/mail-mcp/internal/mac"
-	"github.com/dastrobu/mail-mcp/internal/richtext"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -27,7 +26,7 @@ type CreateReplyInput struct {
 	ReplyToAll    bool     `json:"reply_to_all,omitempty" jsonschema:"Reply to all recipients. Default is false." long:"reply-to-all" description:"Reply to all recipients. Default is false."`
 }
 
-func RegisterCreateReply(srv *mcp.Server, richtextConfig *richtext.PreparedConfig) {
+func RegisterCreateReply(srv *mcp.Server) {
 	mcp.AddTool(srv,
 		&mcp.Tool{
 			Name:        "create_reply",
@@ -42,12 +41,12 @@ func RegisterCreateReply(srv *mcp.Server, richtextConfig *richtext.PreparedConfi
 			},
 		},
 		func(ctx context.Context, request *mcp.CallToolRequest, input CreateReplyInput) (*mcp.CallToolResult, any, error) {
-			return HandleCreateReply(ctx, request, input, richtextConfig)
+			return HandleCreateReply(ctx, request, input)
 		},
 	)
 }
 
-func HandleCreateReply(ctx context.Context, request *mcp.CallToolRequest, input CreateReplyInput, richtextConfig *richtext.PreparedConfig) (*mcp.CallToolResult, any, error) {
+func HandleCreateReply(ctx context.Context, request *mcp.CallToolRequest, input CreateReplyInput) (*mcp.CallToolResult, any, error) {
 	// 1. Input Validation and Setup
 	if input.Account == "" || input.MessageID == 0 || input.Content == "" || len(input.MailboxPath) == 0 {
 		return nil, nil, fmt.Errorf("account, message_id, content, and mailbox_path are required")

@@ -11,7 +11,6 @@ import (
 
 	"github.com/dastrobu/mail-mcp/internal/jxa"
 	"github.com/dastrobu/mail-mcp/internal/mac"
-	"github.com/dastrobu/mail-mcp/internal/richtext"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -28,7 +27,7 @@ type CreateOutgoingMessageInput struct {
 	BccRecipients *[]string `json:"bcc_recipients,omitempty" jsonschema:"List of BCC recipients" long:"bcc-recipients" description:"List of BCC recipients. Can be specified multiple times."`
 }
 
-func RegisterCreateOutgoingMessage(srv *mcp.Server, richtextConfig *richtext.PreparedConfig) {
+func RegisterCreateOutgoingMessage(srv *mcp.Server) {
 	mcp.AddTool(srv,
 		&mcp.Tool{
 			Name:        "create_outgoing_message",
@@ -43,12 +42,12 @@ func RegisterCreateOutgoingMessage(srv *mcp.Server, richtextConfig *richtext.Pre
 			},
 		},
 		func(ctx context.Context, request *mcp.CallToolRequest, input CreateOutgoingMessageInput) (*mcp.CallToolResult, any, error) {
-			return HandleCreateOutgoingMessage(ctx, request, input, richtextConfig)
+			return HandleCreateOutgoingMessage(ctx, request, input)
 		},
 	)
 }
 
-func HandleCreateOutgoingMessage(ctx context.Context, request *mcp.CallToolRequest, input CreateOutgoingMessageInput, richtextConfig *richtext.PreparedConfig) (*mcp.CallToolResult, any, error) {
+func HandleCreateOutgoingMessage(ctx context.Context, request *mcp.CallToolRequest, input CreateOutgoingMessageInput) (*mcp.CallToolResult, any, error) {
 	// 1. Input Validation & Setup
 	if input.Account == "" || input.Subject == "" || input.Content == "" {
 		return nil, nil, fmt.Errorf("account, subject, and content are required")

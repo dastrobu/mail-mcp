@@ -7,7 +7,6 @@ This document provides context and guidelines for GitHub Copilot when working on
 Always refer to these documents for specific subsystem details:
 - **JXA & Mail Interaction:** [`docs/JXA_QUICK_REFERENCE.md`](docs/JXA_QUICK_REFERENCE.md) and [`docs/MAIL_EDITING.md`](docs/MAIL_EDITING.md)
 - **Nested Mailbox Support:** [`internal/tools/scripts/NESTED_MAILBOX_SUPPORT.md`](internal/tools/scripts/NESTED_MAILBOX_SUPPORT.md)
-- **Rich Text & Styling:** [`docs/RICH_TEXT_DESIGN.md`](docs/RICH_TEXT_DESIGN.md)
 - **Launchd Management:** [`docs/LAUNCHD_SERVICE_MANAGEMENT.md`](docs/LAUNCHD_SERVICE_MANAGEMENT.md)
 
 ## Project Overview & Architecture
