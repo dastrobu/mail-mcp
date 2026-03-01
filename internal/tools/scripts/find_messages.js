@@ -2,7 +2,7 @@ function run(argv) {
   const Mail = Application("Mail");
   Mail.includeStandardAdditions = true;
 
-  // Check if Mail.app is running
+  // 1. CRITICAL: Check if running FIRST
   if (!Mail.running()) {
     return JSON.stringify({
       success: false,
@@ -11,15 +11,11 @@ function run(argv) {
     });
   }
 
-  // Collect logs instead of using console.log
+  // 2. Logging setup
   const logs = [];
+  const log = (msg) => logs.push(msg);
 
-  // Helper function to log messages
-  function log(message) {
-    logs.push(message);
-  }
-
-  // Parse arguments
+  // 3. Argument parsing
   let args;
   try {
     args = JSON.parse(argv[0]);
@@ -30,27 +26,28 @@ function run(argv) {
     });
   }
 
-  const accountName = args.account || "";
-  const mailboxPath = args.mailboxPath || [];
-  const limit = args.limit || 50;
+  const {
+    account: accountName,
+    mailboxPath = [],
+    limit = 50,
+    subject,
+    sender,
+    readStatus,
+    flaggedOnly,
+    dateAfter,
+    dateBefore,
+  } = args;
 
-  // Validate account name
   if (!accountName) {
     return JSON.stringify({
       success: false,
       error: "Account name is required",
     });
   }
-
-  // Validate mailbox path
   if (!Array.isArray(mailboxPath) || mailboxPath.length === 0) {
-    return JSON.stringify({
-      success: false,
-      error: "Mailbox path must be a non-empty array",
-    });
+    return JSON.stringify({ success: false, error: "Mailbox path required" });
   }
 
-  // Validate limit
   if (limit < 1 || limit > 1000) {
     return JSON.stringify({
       success: false,
@@ -59,18 +56,13 @@ function run(argv) {
   }
 
   try {
-    // Find account using name lookup
-    let targetAccount;
+    const targetAccount = Mail.accounts[accountName];
     try {
-      targetAccount = Mail.accounts[accountName];
-      targetAccount.name(); // Verify account exists
+      targetAccount.name();
     } catch (e) {
       return JSON.stringify({
         success: false,
-        error:
-          'Account "' +
-          accountName +
-          '" not found. Please verify the account name is correct.',
+        error: `Account "${accountName}" not found.`,
       });
     }
 
@@ -130,228 +122,131 @@ function run(argv) {
       return null;
     }
 
-    let targetAccountRef =
-      typeof targetAccount !== "undefined" ? targetAccount : accounts[0];
-    let targetMailbox = findMailboxByPath(targetAccountRef, mailboxPath);
+    const targetMailbox = findMailboxByPath(targetAccount, mailboxPath);
     if (!targetMailbox) {
       return JSON.stringify({
         success: false,
-        error:
-          "Mailbox path '" +
-          mailboxPath.join(" > ") +
-          "' not found in account '" +
-          accountName +
-          "'.",
+        error: `Mailbox "${mailboxPath.join(" > ")}" not found in account "${accountName}".`,
       });
     }
-    let currentContainer = targetMailbox; // Used by get_message_content
-    let parentMailbox = targetMailbox; // Used by some scripts if any
 
     const msgs = targetMailbox.messages;
+    const count = msgs.length;
+    log(
+      `Mailbox contains ${count} messages. Performing bulk property fetch...`,
+    );
 
-    // Fetch bulk properties only for active filters
-    let subjects = null;
-    let senders = null;
-    let readStatuses = null;
-    let flaggedStatuses = null;
-    let datesReceived = null;
+    // PERFORMANCE OPTIMIZATION:
+    // whose({ subject: { _contains: "..." } }) is extremely slow and causes timeouts on large mailboxes.
+    // Instead, we fetch property arrays once and filter in JavaScript.
+    // This is significantly faster for 10k+ messages as it reduces AppleEvent overhead to a O(1) bulk fetch.
 
-    let filterDateAfter = null;
-    let filterDateBefore = null;
+    let filterSubject = subject ? subject.toLowerCase() : null;
+    let filterSender = sender ? sender.toLowerCase() : null;
+    let filterDateAfter = dateAfter ? new Date(dateAfter) : null;
+    let filterDateBefore = dateBefore ? new Date(dateBefore) : null;
 
-    if (args.subject) {
-      subjects = msgs.subject();
-    }
-    if (args.sender) {
-      senders = msgs.sender();
-    }
-    if (args.readStatus !== undefined && args.readStatus !== null) {
-      readStatuses = msgs.readStatus();
-    }
-    if (args.flaggedOnly) {
-      flaggedStatuses = msgs.flaggedStatus();
-    }
-    if (args.dateAfter) {
-      try {
-        filterDateAfter = new Date(args.dateAfter);
-        datesReceived = msgs.dateReceived();
-      } catch (e) {
-        log("Invalid dateAfter format: " + e.toString());
-      }
-    }
-    if (args.dateBefore) {
-      try {
-        filterDateBefore = new Date(args.dateBefore);
-        if (!datesReceived) datesReceived = msgs.dateReceived();
-      } catch (e) {
-        log("Invalid dateBefore format: " + e.toString());
-      }
-    }
-
-    let totalMessages = 0;
-    if (subjects) totalMessages = subjects.length;
-    else if (senders) totalMessages = senders.length;
-    else if (readStatuses) totalMessages = readStatuses.length;
-    else if (flaggedStatuses) totalMessages = flaggedStatuses.length;
-    else if (datesReceived) totalMessages = datesReceived.length;
-    else totalMessages = msgs.length;
+    // Fetch only the columns needed for filtering to minimize data transfer
+    const subjects = filterSubject ? msgs.subject() : null;
+    const senders = filterSender ? msgs.sender() : null;
+    const readStatuses =
+      readStatus !== undefined && readStatus !== null
+        ? msgs.readStatus()
+        : null;
+    const flaggedStatuses = flaggedOnly ? msgs.flaggedStatus() : null;
+    const datesReceived =
+      filterDateAfter || filterDateBefore ? msgs.dateReceived() : null;
 
     const matchingIndices = [];
-    const subjectLower = args.subject ? args.subject.toLowerCase() : null;
-    const senderLower = args.sender ? args.sender.toLowerCase() : null;
-
-    for (let i = 0; i < totalMessages; i++) {
-      let match = true;
-
-      if (subjects && subjectLower) {
-        const s = subjects[i];
-        if (!s || s.toLowerCase().indexOf(subjectLower) === -1) match = false;
-      }
-      if (match && senders && senderLower) {
-        const s = senders[i];
-        if (!s || s.toLowerCase().indexOf(senderLower) === -1) match = false;
-      }
-      if (match && readStatuses) {
-        if (readStatuses[i] !== args.readStatus) match = false;
-      }
-      if (match && flaggedStatuses) {
-        if (flaggedStatuses[i] !== true) match = false;
-      }
-      if (match && datesReceived) {
+    for (let i = 0; i < count; i++) {
+      if (
+        subjects &&
+        (!subjects[i] ||
+          subjects[i].toLowerCase().indexOf(filterSubject) === -1)
+      )
+        continue;
+      if (
+        senders &&
+        (!senders[i] || senders[i].toLowerCase().indexOf(filterSender) === -1)
+      )
+        continue;
+      if (readStatuses && readStatuses[i] !== readStatus) continue;
+      if (flaggedStatuses && flaggedStatuses[i] !== true) continue;
+      if (datesReceived) {
         const d = datesReceived[i];
-        if (filterDateAfter && d <= filterDateAfter) match = false;
-        if (filterDateBefore && d >= filterDateBefore) match = false;
+        if (filterDateAfter && d <= filterDateAfter) continue;
+        if (filterDateBefore && d >= filterDateBefore) continue;
       }
-
-      if (match) {
-        matchingIndices.push(i);
-      }
+      matchingIndices.push(i);
     }
 
     const totalMatches = matchingIndices.length;
-    log("Found " + totalMatches + " matching messages");
+    log(`Found ${totalMatches} matching messages.`);
 
-    // Limit the number of messages to process
     const maxProcess = Math.min(totalMatches, limit);
-    const messages = [];
+    const resultMessages = [];
 
-    for (let i = 0; i < maxProcess; i++) {
-      const idx = matchingIndices[i];
-      const msg = msgs[idx];
+    if (maxProcess > 0) {
+      const subsetIndices = matchingIndices.slice(0, maxProcess);
+      const subsetMsgs = subsetIndices.map((idx) => msgs[idx]);
 
-      try {
-        // Get basic properties
-        const id = msg.id();
-        const subject = msg.subject();
-        const sender = msg.sender();
-        const dateReceived = msg.dateReceived();
-        const dateSent = msg.dateSent();
-        const readStatus = msg.readStatus();
-        const flaggedStatus = msg.flaggedStatus();
-        const messageSize = msg.messageSize();
+      for (let i = 0; i < maxProcess; i++) {
+        const msg = subsetMsgs[i];
 
-        // Get content preview
+        // 1. Get content safely (often fails on weird/syncing messages)
         let content = "";
         try {
-          content = msg.content();
+          content = msg.content() || "";
         } catch (e) {
-          log("Error reading content for message " + id + ": " + e.toString());
-          content = "";
+          log("Error reading content for message " + i + ": " + e.toString());
         }
 
-        const contentPreview =
-          content.length > 100 ? content.substring(0, 100) + "..." : content;
-
-        // Get recipient counts
-        let toCount = 0;
-        let ccCount = 0;
-
+        // 2. Get the rest of the properties
         try {
-          toCount = msg.toRecipients.length;
-        } catch (e) {
-          log("Error reading To recipients count: " + e.toString());
-          toCount = 0;
-        }
+          // Cache dateSent to avoid double AppleEvents
+          const ds = msg.dateSent();
 
-        try {
-          ccCount = msg.ccRecipients.length;
-        } catch (e) {
-          log("Error reading CC recipients count: " + e.toString());
-          ccCount = 0;
-        }
-
-        // Get mailbox path for this message
-        function getMailboxPath(mailbox, accountName) {
-          const path = [];
-          let current = mailbox;
-
-          while (current) {
-            try {
-              const name = current.name();
-              if (name === accountName) break;
-              path.unshift(name);
-              current = current.container();
-            } catch (e) {
-              break;
-            }
-          }
-          return path;
-        }
-
-        let messageMboxPath = mailboxPath;
-        try {
-          const msgMailbox = msg.mailbox();
-          messageMboxPath = getMailboxPath(msgMailbox, accountName);
+          resultMessages.push({
+            id: msg.id(),
+            subject: msg.subject(),
+            sender: msg.sender(),
+            date_received: msg.dateReceived().toISOString(),
+            date_sent: ds ? ds.toISOString() : null,
+            read_status: msg.readStatus(),
+            flagged_status: msg.flaggedStatus(),
+            message_size: msg.messageSize(),
+            content_preview:
+              content.length > 100
+                ? content.substring(0, 100) + "..."
+                : content,
+            content_length: content.length,
+            mailbox_path: mailboxPath,
+            account: accountName,
+          });
         } catch (e) {
           log(
-            "Error reading mailbox path for message " +
-              id +
-              ": " +
-              e.toString(),
+            "Error reading properties for message " + i + ": " + e.toString(),
           );
+          // Skip this message and continue
         }
-
-        messages.push({
-          id: id,
-          subject: subject,
-          sender: sender,
-          date_received: dateReceived.toISOString(),
-          date_sent: dateSent ? dateSent.toISOString() : null,
-          read_status: readStatus,
-          flagged_status: flaggedStatus,
-          message_size: messageSize,
-          content_preview: contentPreview,
-          content_length: content.length,
-          to_count: toCount,
-          cc_count: ccCount,
-          total_recipients: toCount + ccCount,
-          mailbox_path: messageMboxPath,
-          account: accountName,
-        });
-      } catch (e) {
-        log("Error reading message " + i + ": " + e.toString());
-        // Skip this message and continue
       }
     }
 
     return JSON.stringify({
       success: true,
       data: {
-        messages: messages,
-        count: messages.length,
+        messages: resultMessages,
+        count: resultMessages.length,
         total_matches: totalMatches,
         limit: limit,
         has_more: totalMatches > limit,
         filters_applied: {
-          subject: args.subject || null,
-          sender: args.sender || null,
-          read_status:
-            args.readStatus !== undefined && args.readStatus !== null
-              ? args.readStatus
-              : null,
-          flagged_only: args.flaggedOnly || false,
-          date_after: args.dateAfter || null,
-          date_before: args.dateBefore || null,
+          subject: subject || null,
+          sender: sender || null,
+          read_status: readStatus !== undefined ? readStatus : null,
+          flagged_only: flaggedOnly || false,
+          date_after: dateAfter || null,
+          date_before: dateBefore || null,
         },
       },
       logs: logs.join("\n"),
@@ -359,7 +254,8 @@ function run(argv) {
   } catch (e) {
     return JSON.stringify({
       success: false,
-      error: "Failed to find messages: " + e.toString(),
+      error: e.toString(),
+      logs: logs.join("\n"),
     });
   }
 }
