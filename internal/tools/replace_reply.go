@@ -38,7 +38,7 @@ func RegisterReplaceReply(srv *mcp.Server) {
 	mcp.AddTool(srv,
 		&mcp.Tool{
 			Name:        "replace_reply",
-			Description: "Replaces an existing reply with new content. Deletes the old reply window, creates a new one, and pastes in the new content. NOTE: Mail.app may auto-save messages as drafts. If replacing again, use the new outgoing_id.",
+			Description: "Replaces an existing reply with new content. Deletes the old reply window, creates a new one, and pastes in the new content. NOTE: Mail.app may auto-save messages as drafts. Always check for and delete the old auto-saved draft after replacing. If replacing again, use the new outgoing_id.",
 			InputSchema: GenerateSchema[ReplaceReplyInput](),
 			Annotations: &mcp.ToolAnnotations{
 				Title:           "Replace Reply",
