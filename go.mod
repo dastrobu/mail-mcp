@@ -6,7 +6,7 @@ require (
 	github.com/google/jsonschema-go v0.4.2
 	github.com/jessevdk/go-flags v1.6.1
 	github.com/joho/godotenv v1.5.1
-	github.com/modelcontextprotocol/go-sdk v1.4.1
+	github.com/modelcontextprotocol/go-sdk v1.5.0
 	github.com/yuin/goldmark v1.8.2
 )
 
