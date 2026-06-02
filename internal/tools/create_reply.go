@@ -20,8 +20,8 @@ var createReplyScript string
 type CreateReplyInput struct {
 	MessageID     int      `json:"message_id" jsonschema:"The ID of the message to reply to" long:"message-id" description:"The ID of the message to reply to"`
 	Account       string   `json:"account" jsonschema:"The name of the account the original message is in" long:"account" description:"The name of the account the original message is in"`
-	MailboxPath   []string `json:"mailbox_path" jsonschema:"The full path to the mailbox of the original message (e.g., [\"Inbox\", \"Subfolder\"])" long:"mailbox-path" description:"The full path to the mailbox of the original message (e.g., [\"Inbox\", \"Subfolder\"]). Can be specified multiple times."`
-	Content       string   `json:"content" jsonschema:"Email body content for the reply. Supports Markdown formatting." long:"content" description:"Email body content for the reply. Supports Markdown formatting."`
+	MailboxPath   []string `json:"mailbox_path" jsonschema:"The full path to the mailbox of the original message (e.g., ['Inbox', 'Subfolder'])" long:"mailbox-path" description:"The full path to the mailbox of the original message (e.g., [\"Inbox\", \"Subfolder\"]). Can be specified multiple times."`
+	Content       string   "json:\"content\" jsonschema:\"Email body content for the reply. Supports Markdown formatting. Separate inline code spans from adjacent words with a space (e.g. 'the `foo` bar' not 'the `foo`bar'), but keep punctuation attached without leading space (e.g. '`foo`.').\" long:\"content\" description:\"Email body content for the reply. Supports Markdown formatting.\""
 	ContentFormat *string  `json:"content_format,omitempty" jsonschema:"Content format: 'plain' or 'markdown'. Default is 'markdown'." long:"content-format" description:"Content format: 'plain' or 'markdown'. Default is 'markdown'."`
 	ReplyToAll    bool     `json:"reply_to_all,omitempty" jsonschema:"Reply to all recipients. Default is false." long:"reply-to-all" description:"Reply to all recipients. Default is false."`
 }
