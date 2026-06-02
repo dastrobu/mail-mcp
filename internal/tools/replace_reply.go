@@ -23,7 +23,7 @@ type ReplaceReplyInput struct {
 	Account     string   `json:"account" jsonschema:"The account of the original message" long:"account" description:"The account of the original message"`
 	MailboxPath []string `json:"mailbox_path" jsonschema:"The mailbox path of the original message" long:"mailbox-path" description:"The mailbox path of the original message. Can be specified multiple times."`
 
-	Content       string  `json:"content" jsonschema:"New email body content for the reply. Supports Markdown formatting." long:"content" description:"New email body content for the reply. Supports Markdown formatting."`
+	Content       string  `json:"content" jsonschema:"New email body content for the reply. Supports Markdown formatting. Always include a space before and after inline code (backtick) spans, e.g. use 'the \`foo\` bar' not 'the \`foo\`bar'." long:"content" description:"New email body content for the reply. Supports Markdown formatting."`
 	ContentFormat *string `json:"content_format,omitempty" jsonschema:"Content format: 'plain' or 'markdown'. Default is 'markdown'." long:"content-format" description:"Content format: 'plain' or 'markdown'. Default is 'markdown'."`
 	ReplyToAll    bool    `json:"reply_to_all,omitempty" jsonschema:"Reply to all recipients. Default is false." long:"reply-to-all" description:"Reply to all recipients. Default is false."`
 
