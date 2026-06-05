@@ -20,7 +20,7 @@ var createOutgoingMessageScript string
 type CreateOutgoingMessageInput struct {
 	Account       string    `json:"account" jsonschema:"The name of the account to send from" long:"account" description:"The name of the account to send from"`
 	Subject       string    `json:"subject" jsonschema:"Subject line of the email" long:"subject" description:"Subject line of the email"`
-	Content       string    `json:"content" jsonschema:"Email body content. Supports Markdown formatting. Always include a space before and after inline code (backtick) spans, e.g. use 'the \`foo\` bar' not 'the \`foo\`bar'." long:"content" description:"Email body content. Supports Markdown formatting."`
+	Content       string    `json:"content" jsonschema:"Email body content. Supports Markdown formatting. Always include a space before and after inline code (backtick) spans, e.g. use 'the foo bar' not 'the foobar' (with backticks around foo)." long:"content" description:"Email body content. Supports Markdown formatting."`
 	ContentFormat *string   `json:"content_format,omitempty" jsonschema:"Content format: 'plain' or 'markdown'. Default is 'markdown'." long:"content-format" description:"Content format: 'plain' or 'markdown'. Default is 'markdown'."`
 	ToRecipients  *[]string `json:"to_recipients,omitempty" jsonschema:"List of To recipients" long:"to-recipients" description:"List of To recipients. Can be specified multiple times."`
 	CcRecipients  *[]string `json:"cc_recipients,omitempty" jsonschema:"List of CC recipients" long:"cc-recipients" description:"List of CC recipients. Can be specified multiple times."`
