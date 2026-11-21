@@ -48,7 +48,7 @@ checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
   algorithm: sha256
 
-# Homebrew tap (using modern 'homebrew' instead of deprecated 'brews')
+# Homebrew tap formula (using 'brews' to generate Formula with service support)
 brews:
   - repository:
       owner: dastrobu
