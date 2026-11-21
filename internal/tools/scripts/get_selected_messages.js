@@ -87,6 +87,17 @@ function run(argv) {
       });
     }
 
+    // Collect known account names for mailbox path traversal
+    const accountNames = [];
+    try {
+      const accounts = Mail.accounts();
+      for (let j = 0; j < accounts.length; j++) {
+        try {
+          accountNames.push(accounts[j].name());
+        } catch (e) {}
+      }
+    } catch (e) {}
+
     // Helper function to build mailbox path
     // Returns array like ["Inbox", "GitHub"] for nested mailboxes
     function getMailboxPath(mailbox, accountName) {
@@ -99,7 +110,10 @@ function run(argv) {
           const name = current.name();
 
           // Stop if we've reached the account level
-          if (name === accountName) {
+          if (
+            (accountName && name === accountName) ||
+            accountNames.includes(name)
+          ) {
             break;
           }
 
@@ -126,25 +140,77 @@ function run(argv) {
     for (let i = startAt; i < endAt; i++) {
       const msg = selectedMessages[i];
 
-      // Get mailbox and account information
-      const mailbox = msg.mailbox();
-      const account = mailbox.account();
+      // Get mailbox and account information safely
+      let mailboxName = "";
+      let accountName = "";
+      let mailboxPath = [];
 
-      // Build mailbox path for nested mailbox support
-      const mailboxPath = getMailboxPath(mailbox, account.name());
+      try {
+        const mailbox = msg.mailbox();
+        if (mailbox) {
+          try {
+            mailboxName = mailbox.name();
+          } catch (e) {}
+
+          try {
+            const acc = mailbox.account();
+            if (acc) {
+              accountName = acc.name();
+            }
+          } catch (e) {}
+
+          // If account is still not determined, traverse containers to find if parent is an account
+          if (!accountName) {
+            let cur = mailbox;
+            while (cur) {
+              try {
+                cur = cur.container();
+                if (cur) {
+                  const curName = cur.name();
+                  if (accountNames.includes(curName)) {
+                    accountName = curName;
+                    break;
+                  }
+                }
+              } catch (e) {
+                break;
+              }
+            }
+          }
+
+          mailboxPath = getMailboxPath(mailbox, accountName);
+        }
+      } catch (e) {}
+
+      // Dates handling (safely convert to ISO if valid date objects)
+      let dateReceivedISO = null;
+      try {
+        const dr = msg.dateReceived();
+        if (dr) {
+          dateReceivedISO = dr.toISOString();
+        }
+      } catch (e) {}
+
+      let dateSentISO = null;
+      try {
+        const ds = msg.dateSent();
+        if (ds) {
+          dateSentISO = ds.toISOString();
+        }
+      } catch (e) {}
 
       result.push({
         id: msg.id(),
         subject: msg.subject(),
         sender: msg.sender(),
-        dateReceived: msg.dateReceived().toISOString(),
-        dateSent: msg.dateSent().toISOString(),
+        dateReceived: dateReceivedISO,
+        dateSent: dateSentISO,
         readStatus: msg.readStatus(),
         flaggedStatus: msg.flaggedStatus(),
         junkMailStatus: msg.junkMailStatus(),
-        mailbox: mailbox.name(),
+        mailbox: mailboxName,
         mailboxPath: mailboxPath,
-        account: account.name(),
+        account: accountName,
       });
     }
 
