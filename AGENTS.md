@@ -12,8 +12,13 @@ Always refer to these documents for specific subsystem details:
 ## Project Overview & Architecture
 
 An MCP server providing programmatic, read-only access to macOS Mail.app.
-- **Technologies:** Go 1.26+, MCP Go SDK v1.2.0+, JXA (JavaScript for Automation).
-- **Core Principles:** Single binary (`//go:embed` for scripts), dual transport (HTTP/STDIO, HTTP recommended for permissions), modular design (one file per tool in `internal/tools/`).
+- **Technologies:** Go 1.27+, MCP Go SDK v1.2.0+, JXA (JavaScript for Automation).
+- **Core Principles:** Single binary (`//go:embed` for scripts), dual transport (HTTP/STDIO, HTTP recommended for permissions), modular design (one file per tool in `internal/tools/`), `encoding/json/v2` everywhere.
+
+## JSON Handling (CRITICAL)
+
+- **Always use `encoding/json/v2` (`json/v2`):** Never import or use the legacy `encoding/json` package.
+- In Go code, import `"encoding/json/v2"`. For text formatting / indentation options, import `"encoding/json/jsontext"`.
 
 ## Tool Implementation Guidelines
 
@@ -127,3 +132,4 @@ go test -v -count=1 ./...
 7.  [ ] Did you use `whose()` for finding messages rather than iterating arrays?
 8.  [ ] Are you using `log()` instead of `console.log()`?
 9.  [ ] Did you ignore any errors silently?
+10. [ ] Did you use `encoding/json/v2` (`json/v2`) and never the legacy `encoding/json`?

@@ -7,7 +7,7 @@ Thank you for your interest in contributing to the Apple Mail MCP Server! This d
 ### Prerequisites
 
 - macOS (Mail.app is macOS-only)
-- Go 1.26 or later
+- Go 1.27 or later
 - Mail.app configured with at least one email account
 - Git
 
@@ -319,7 +319,6 @@ Example:
 ```go
 //go:embed scripts/my_tool.js
 var myToolScript string
-
 type MyToolInput struct {
     Param string `json:"param" jsonschema:"description=Parameter description"`
 }
