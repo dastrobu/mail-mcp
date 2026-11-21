@@ -258,7 +258,7 @@ func TestResult_JSONMarshaling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := json.Marshal(tt.result)
+			got, err := json.Marshal(tt.result, json.Deterministic(true))
 			if err != nil {
 				t.Fatalf("json.Marshal() error = %v", err)
 			}
