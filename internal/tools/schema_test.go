@@ -1,7 +1,7 @@
 package tools
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"reflect"
 	"testing"
 
@@ -24,7 +24,7 @@ func TestSchemaGeneration(t *testing.T) {
 	fixSchema(schema)
 
 	// Marshal to JSON to verify the output
-	data, err := json.MarshalIndent(schema, "", "  ")
+	data, err := json.Marshal(schema)
 	if err != nil {
 		t.Fatalf("Failed to marshal schema: %v", err)
 	}
