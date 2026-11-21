@@ -852,7 +852,7 @@ brew uninstall mail-mcp
 # If you used brew services:
 rm $(brew --prefix)/var/log/mail-mcp.*
 # If you used mail-mcp launchd create:
-rm -r ~/Library/Logs/com.github.dastrobu/mail-mcp/
+rm -r ~/Library/Logs/com.github.dastrobu.mail-mcp/
 ```
 
 **Why this order matters:** The `launchd remove` command needs the binary to properly unload and remove the service. If you uninstall first, you'll need to manually remove the plist file.
@@ -861,8 +861,8 @@ rm -r ~/Library/Logs/com.github.dastrobu/mail-mcp/
 
 ```bash
 # Manually remove the plist and unload the service
-launchctl unload ~/Library/LaunchAgents/com.github.dastrobu/mail-mcp.plist
-rm ~/Library/LaunchAgents/com.github.dastrobu/mail-mcp.plist
+launchctl unload ~/Library/LaunchAgents/com.github.dastrobu.mail-mcp.plist
+rm ~/Library/LaunchAgents/com.github.dastrobu.mail-mcp.plist
 ```
 
 ### Manual Installation
@@ -877,7 +877,7 @@ mail-mcp launchd remove
 sudo rm /usr/local/bin/mail-mcp
 
 # Optionally remove logs
-rm -r ~/Library/Logs/com.github.dastrobu/mail-mcp/
+rm -r ~/Library/Logs/com.github.dastrobu.mail-mcp/
 ```
 
 ## Architecture

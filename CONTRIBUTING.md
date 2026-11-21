@@ -319,6 +319,7 @@ Example:
 ```go
 //go:embed scripts/my_tool.js
 var myToolScript string
+
 type MyToolInput struct {
     Param string `json:"param" jsonschema:"description=Parameter description"`
 }
