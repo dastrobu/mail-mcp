@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"io"
 	"log"
@@ -92,7 +93,7 @@ func debugMiddleware(debug bool) func(mcp.MethodHandler) mcp.MethodHandler {
 			// Log the request
 			if req != nil {
 				p := req.GetParams()
-				j, _ := json.MarshalIndent(p, "", "  ")
+				j, _ := json.Marshal(p, jsontext.WithIndent("  "))
 				log.Printf("[DEBUG] MCP Request: %s\nParams: %s\n", method, string(j))
 			} else {
 				log.Printf("[DEBUG] MCP Request: %s\n", method)
@@ -105,7 +106,7 @@ func debugMiddleware(debug bool) func(mcp.MethodHandler) mcp.MethodHandler {
 			if err != nil {
 				log.Printf("[DEBUG] MCP Response: %s\nError: %v\n", method, err)
 			} else if result != nil {
-				resultJSON, _ := json.MarshalIndent(result, "", "  ")
+				resultJSON, _ := json.Marshal(result, jsontext.WithIndent("  "))
 				log.Printf("[DEBUG] MCP Response: %s\nResult: %s\n", method, string(resultJSON))
 			} else {
 				log.Printf("[DEBUG] MCP Response: %s\n", method)
@@ -234,9 +235,7 @@ func registerToolHandlers() {
 		if err != nil {
 			return err
 		}
-		encoder := json.NewEncoder(os.Stdout)
-		encoder.SetIndent("", "  ")
-		return encoder.Encode(result)
+		return json.MarshalWrite(os.Stdout, result, jsontext.WithIndent("  "))
 	}
 
 	opts.GlobalOpts.Tool.ListAccounts.Handler = func(input tools.ListAccountsInput) error {

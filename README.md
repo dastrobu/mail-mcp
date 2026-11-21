@@ -139,7 +139,7 @@ mail-mcp launchd create
 ### Option 3: Install via Go
 
 ```bash
-# Install directly from GitHub (requires Go 1.26+)
+# Install directly from GitHub (requires Go 1.27+)
 go install github.com/dastrobu/mail-mcp@latest
 
 # Set up launchd service

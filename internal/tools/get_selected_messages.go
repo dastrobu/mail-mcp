@@ -3,7 +3,7 @@ package tools
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 
 	"github.com/dastrobu/mail-mcp/internal/jxa"
